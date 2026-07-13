@@ -1,5 +1,5 @@
 import type { Content } from "./types";
-import type { LabTest, Question, QuestionPart } from "@/lib/data/types";
+import type { LabTest, Question, QuestionPart, Step } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import { courses, labTests, questions } from "@/lib/data/fixtures";
 
@@ -200,5 +200,93 @@ export function reorderParts(
             ),
           }
     ),
+  };
+}
+
+export function createStep(
+  content: Content,
+  partId: string,
+  input: {
+    promptLatex: string;
+    answerType: AnswerType;
+    answerValue: AnswerValue;
+    answerConfig?: AnswerConfig;
+    explanationLatex: string;
+  }
+): { content: Content; id: string } {
+  const id = newId("step");
+  return {
+    content: {
+      ...content,
+      questions: content.questions.map((q) => ({
+        ...q,
+        parts: q.parts.map((p) => {
+          if (p.id !== partId) return p;
+          const number = p.steps.length
+            ? Math.max(...p.steps.map((s) => s.number)) + 1
+            : 1;
+          const sortOrder = p.steps.length
+            ? Math.max(...p.steps.map((s) => s.sortOrder)) + 1
+            : 1;
+          const step: Step = { id, partId, number, sortOrder, hints: [], ...input };
+          return { ...p, steps: [...p.steps, step] };
+        }),
+      })),
+    },
+    id,
+  };
+}
+
+export function updateStep(
+  content: Content,
+  stepId: string,
+  patch: Partial<Omit<Step, "id" | "partId" | "hints">>
+): Content {
+  return {
+    ...content,
+    questions: content.questions.map((q) => ({
+      ...q,
+      parts: q.parts.map((p) => ({
+        ...p,
+        steps: p.steps.map((s) => (s.id === stepId ? { ...s, ...patch } : s)),
+      })),
+    })),
+  };
+}
+
+export function deleteStep(content: Content, stepId: string): Content {
+  return {
+    ...content,
+    questions: content.questions.map((q) => ({
+      ...q,
+      parts: q.parts.map((p) => ({
+        ...p,
+        steps: p.steps.filter((s) => s.id !== stepId),
+      })),
+    })),
+  };
+}
+
+export function reorderSteps(
+  content: Content,
+  partId: string,
+  orderedIds: string[]
+): Content {
+  const order = new Map(orderedIds.map((id, i) => [id, i + 1]));
+  return {
+    ...content,
+    questions: content.questions.map((q) => ({
+      ...q,
+      parts: q.parts.map((p) =>
+        p.id !== partId
+          ? p
+          : {
+              ...p,
+              steps: p.steps.map((s) =>
+                order.has(s.id) ? { ...s, sortOrder: order.get(s.id) as number } : s
+              ),
+            }
+      ),
+    })),
   };
 }

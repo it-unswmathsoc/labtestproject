@@ -4,6 +4,7 @@ import type { QuestionPart } from "@/lib/data/types";
 import { useAdminStore } from "./AdminStoreProvider";
 import { LatexField } from "./LatexField";
 import { AnswerValueEditor } from "./AnswerValueEditor";
+import { StepsEditor } from "./StepsEditor";
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900";
@@ -58,18 +59,25 @@ export function PartEditor({ part }: { part: QuestionPart }) {
           />
         </label>
 
-        <AnswerValueEditor
-          answerType={part.answerType}
-          answerValue={part.answerValue}
-          answerConfig={part.answerConfig}
-          onChange={(state) =>
-            editPart(part.id, {
-              answerType: state.answerType,
-              answerValue: state.answerValue,
-              answerConfig: state.answerConfig,
-            })
-          }
-        />
+        <StepsEditor part={part} />
+
+        <div className="rounded-md border border-gray-200 p-2">
+          <div className="mb-1 text-xs font-semibold uppercase text-gray-500">
+            Final answer
+          </div>
+          <AnswerValueEditor
+            answerType={part.answerType}
+            answerValue={part.answerValue}
+            answerConfig={part.answerConfig}
+            onChange={(state) =>
+              editPart(part.id, {
+                answerType: state.answerType,
+                answerValue: state.answerValue,
+                answerConfig: state.answerConfig,
+              })
+            }
+          />
+        </div>
       </div>
     </div>
   );

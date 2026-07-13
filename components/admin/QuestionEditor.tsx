@@ -17,7 +17,10 @@ export function QuestionEditor({ question }: { question: Question }) {
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            setShowPreview(false);
+            setOpen((o) => !o);
+          }}
           className="text-left font-medium text-gray-900"
         >
           {open ? "▾" : "▸"} Question {question.number}

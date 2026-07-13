@@ -46,5 +46,6 @@ describe("QuestionPreview", () => {
     expect(screen.getByText(/The sub-goal/)).toBeInTheDocument();
     expect(screen.getByText(/The explanation/)).toBeInTheDocument();
     expect(screen.getByText(/The hint/)).toBeInTheDocument();
+    expect(screen.getByText(/Final answer/)).toBeInTheDocument();
   });
 });

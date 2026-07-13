@@ -59,6 +59,20 @@ export function PartEditor({ part }: { part: QuestionPart }) {
           />
         </label>
 
+        <label className="block">
+          <span className="text-sm font-medium text-gray-700">
+            Image alt text (accessibility)
+          </span>
+          <input
+            type="text"
+            className={inputClass}
+            value={part.imageAlt ?? ""}
+            onChange={(e) =>
+              editPart(part.id, { imageAlt: e.target.value || undefined })
+            }
+          />
+        </label>
+
         <StepsEditor part={part} />
 
         <div className="rounded-md border border-gray-200 p-2">

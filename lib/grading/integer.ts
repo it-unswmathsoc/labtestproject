@@ -6,10 +6,10 @@ export function gradeInteger(
   config: AnswerConfig = {}
 ): GradeResult {
   const trimmed = input.trim();
-  const parsed = Number(trimmed);
-  if (trimmed === "" || Number.isNaN(parsed)) {
+  if (!/^-?\d+$/.test(trimmed)) {
     return { correct: false, normalized: trimmed };
   }
+  const parsed = Number(trimmed);
   const tolerance = config.tolerance ?? 0;
   const correct = Math.abs(parsed - answer) <= tolerance;
   return { correct, normalized: String(parsed) };

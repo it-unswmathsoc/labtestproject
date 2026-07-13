@@ -30,4 +30,16 @@ describe("gradeInteger", () => {
   it("returns the normalized numeric string", () => {
     expect(gradeInteger(" 007 ", 7).normalized).toBe("7");
   });
+
+  it("rejects scientific notation input", () => {
+    expect(gradeInteger("1e3", 1000).correct).toBe(false);
+  });
+
+  it("rejects decimal input", () => {
+    expect(gradeInteger("1.5", 1).correct).toBe(false);
+  });
+
+  it("rejects hexadecimal input", () => {
+    expect(gradeInteger("0x10", 16).correct).toBe(false);
+  });
 });

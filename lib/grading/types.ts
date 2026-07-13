@@ -20,7 +20,7 @@ export interface ChoiceOption {
 }
 
 export interface AnswerConfig {
-  /** Absolute tolerance for integer/expression numeric compare. Default 0. */
+  /** Absolute tolerance for integer numeric compare. Default 0. */
   tolerance?: number;
   /** Choice options for single_choice / multi_select. */
   options?: ChoiceOption[];
@@ -30,6 +30,6 @@ export interface AnswerConfig {
 
 export interface GradeResult {
   correct: boolean;
-  /** The student input after normalization, for display/echo. */
+  /** The student input, canonicalized where the grader defines a canonical form, otherwise trimmed. For display/echo. */
   normalized: string;
 }

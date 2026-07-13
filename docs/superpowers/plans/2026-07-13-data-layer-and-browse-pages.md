@@ -1345,6 +1345,10 @@ git commit -m "fix: address final verification issues"
 
 ---
 
+## Known Issues (post-implementation)
+
+- **`notFound()` returns HTTP 200 instead of 404.** On draft/unknown routes the not-found page renders correctly and draft content stays hidden (UX is correct), but the HTTP status is 200 in Next.js 16.2.10. Removing `revalidate` did not change it — it is a framework-level behaviour, not a page-logic bug. Low impact for an internal study tool; revisit when wiring the real backend / SEO matters (candidate: a `middleware.ts` status override or a Next upgrade).
+
 ## Roadmap: Plans 3–4 (unchanged)
 
 - **Plan 3 — Guided Step Player**: `components/player/` (`QuestionPlayer`, `StepCard`, per-type `AnswerInput`, `HintStack`, reveal hatches), wiring the Plan 1 `grade()` dispatcher for per-step + final grading, unlimited attempts, no gating, skip-ahead, `localStorage` progress. Mount at `/tests/[testId]/q/[questionId]`; replace the disabled "Practice" button with a real link.

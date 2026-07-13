@@ -49,4 +49,11 @@ describe("data queries", () => {
   it("returns no questions for an unpublished test", async () => {
     expect(await getQuestionsForTest("test-1081-lt2-draft")).toEqual([]);
   });
+
+  it("returns data that callers can mutate without corrupting the fixture", async () => {
+    const first = await getQuestionsForTest("test-1081-lt1");
+    first[0].parts[0].answerValue = 999;
+    const second = await getQuestionsForTest("test-1081-lt1");
+    expect(second[0].parts[0].answerValue).toBe(19);
+  });
 });

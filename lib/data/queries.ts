@@ -31,6 +31,12 @@ export async function getQuestionsForTest(testId: string): Promise<Question[]> {
     .sort(bySortOrder)
     .map((q) => ({
       ...q,
-      parts: [...q.parts].sort(bySortOrder),
+      parts: [...q.parts].sort(bySortOrder).map((p) => ({
+        ...p,
+        steps: [...p.steps].sort(bySortOrder).map((s) => ({
+          ...s,
+          hints: [...s.hints].sort(bySortOrder),
+        })),
+      })),
     }));
 }

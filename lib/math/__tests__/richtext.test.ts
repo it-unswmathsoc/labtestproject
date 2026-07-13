@@ -33,4 +33,18 @@ describe("parseRichText", () => {
   it("returns an empty array for an empty string", () => {
     expect(parseRichText("")).toEqual([]);
   });
+
+  it("handles display math with surrounding text", () => {
+    expect(parseRichText("before $$x^2$$ after")).toEqual([
+      { type: "text", value: "before " },
+      { type: "displayMath", value: "x^2" },
+      { type: "text", value: " after" },
+    ]);
+  });
+
+  it("passes an unbalanced single dollar through as literal text", () => {
+    expect(parseRichText("cost is $5 today")).toEqual([
+      { type: "text", value: "cost is $5 today" },
+    ]);
+  });
 });

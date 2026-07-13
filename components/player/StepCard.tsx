@@ -21,16 +21,14 @@ export function StepCard({
   onSolved: () => void;
 }) {
   const [value, setValue] = useState<InputValue>(emptyInput(step.answerType));
-  const [status, setStatus] = useState<Status>(solved ? "correct" : "idle");
+  const [status, setStatus] = useState<Status>("idle");
   const [revealed, setRevealed] = useState(false);
 
+  const correct = solved || status === "correct";
+
   const check = () => {
-    const result = grade(
-      step.answerType,
-      value,
-      step.answerValue,
-      step.answerConfig ?? {}
-    );
+    if (correct) return;
+    const result = grade(step.answerType, value, step.answerValue, step.answerConfig ?? {});
     if (result.correct) {
       setStatus("correct");
       onSolved();
@@ -39,13 +37,13 @@ export function StepCard({
     }
   };
 
-  const showExplanation = status === "correct" || revealed;
+  const showExplanation = correct || revealed;
 
   return (
     <div className="rounded-lg border border-gray-200 p-4">
       <div className="mb-2 flex items-center gap-2">
         <span className="text-sm font-medium text-gray-500">Step {step.number}</span>
-        {status === "correct" ? <span className="text-green-600">✓</span> : null}
+        {correct ? <span className="text-green-600">✓</span> : null}
       </div>
       <div className="mb-3 text-gray-800">
         <RichText>{step.promptLatex}</RichText>
@@ -72,9 +70,7 @@ export function StepCard({
         >
           Reveal answer
         </button>
-        {status === "correct" ? (
-          <span className="text-sm text-green-600">Correct!</span>
-        ) : null}
+        {correct ? <span className="text-sm text-green-600">Correct!</span> : null}
         {status === "incorrect" ? (
           <span className="text-sm text-amber-600">Not quite — try again.</span>
         ) : null}

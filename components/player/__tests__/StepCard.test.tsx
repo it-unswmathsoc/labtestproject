@@ -49,4 +49,17 @@ describe("StepCard", () => {
     await userEvent.click(screen.getByRole("button", { name: /reveal answer/i }));
     expect(screen.getByText(/It equals 32/)).toBeInTheDocument();
   });
+
+  it("shows the checkmark and explanation for an already-solved step", () => {
+    render(<StepCard step={step} solved={true} onSolved={vi.fn()} />);
+    expect(screen.getByText("✓")).toBeInTheDocument();
+    expect(screen.getByText(/It equals 32/)).toBeInTheDocument();
+  });
+
+  it("does not re-fire onSolved when already solved", async () => {
+    const onSolved = vi.fn();
+    render(<StepCard step={step} solved={true} onSolved={onSolved} />);
+    await userEvent.click(screen.getByRole("button", { name: /check/i }));
+    expect(onSolved).not.toHaveBeenCalled();
+  });
 });

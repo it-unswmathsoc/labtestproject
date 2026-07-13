@@ -19,16 +19,14 @@ export function FinalAnswer({
   onSolved: () => void;
 }) {
   const [value, setValue] = useState<InputValue>(emptyInput(part.answerType));
-  const [status, setStatus] = useState<Status>(solved ? "correct" : "idle");
+  const [status, setStatus] = useState<Status>("idle");
   const [revealed, setRevealed] = useState(false);
 
+  const solvedNow = solved || status === "correct";
+
   const check = () => {
-    const result = grade(
-      part.answerType,
-      value,
-      part.answerValue,
-      part.answerConfig ?? {}
-    );
+    if (solvedNow) return;
+    const result = grade(part.answerType, value, part.answerValue, part.answerConfig ?? {});
     if (result.correct) {
       setStatus("correct");
       onSolved();
@@ -62,9 +60,7 @@ export function FinalAnswer({
         >
           Reveal answer
         </button>
-        {status === "correct" ? (
-          <span className="text-sm text-green-600">Solved! 🎉</span>
-        ) : null}
+        {solvedNow ? <span className="text-sm text-green-600">Solved! 🎉</span> : null}
         {status === "incorrect" ? (
           <span className="text-sm text-amber-600">Not quite — try again.</span>
         ) : null}

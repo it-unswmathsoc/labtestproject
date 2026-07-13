@@ -23,8 +23,16 @@ import {
   updatePart,
   deletePart,
   reorderParts,
+  createStep,
+  updateStep,
+  deleteStep,
+  reorderSteps,
+  createHint,
+  updateHint,
+  deleteHint,
+  reorderHints,
 } from "@/lib/admin/content-store";
-import type { LabTest, Question, QuestionPart } from "@/lib/data/types";
+import type { LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 
 const STORAGE_KEY = "labtest:admin:content";
@@ -60,6 +68,23 @@ interface AdminStore {
   editPart: (partId: string, patch: Partial<Omit<QuestionPart, "id" | "questionId" | "steps">>) => void;
   removePart: (partId: string) => void;
   moveParts: (questionId: string, orderedIds: string[]) => void;
+  addStep: (
+    partId: string,
+    input: {
+      promptLatex: string;
+      answerType: AnswerType;
+      answerValue: AnswerValue;
+      answerConfig?: AnswerConfig;
+      explanationLatex: string;
+    }
+  ) => string;
+  editStep: (stepId: string, patch: Partial<Omit<Step, "id" | "partId" | "hints">>) => void;
+  removeStep: (stepId: string) => void;
+  moveSteps: (partId: string, orderedIds: string[]) => void;
+  addHint: (stepId: string, input: { bodyLatex: string }) => string;
+  editHint: (hintId: string, patch: Partial<Omit<Hint, "id" | "stepId">>) => void;
+  removeHint: (hintId: string) => void;
+  moveHints: (stepId: string, orderedIds: string[]) => void;
 }
 
 const AdminStoreContext = createContext<AdminStore | null>(null);
@@ -160,6 +185,47 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     [commit]
   );
 
+  const addStep = useCallback<AdminStore["addStep"]>(
+    (partId, input) => {
+      const { content: next, id } = createStep(contentRef.current, partId, input);
+      commit(next);
+      return id;
+    },
+    [commit]
+  );
+  const editStep = useCallback<AdminStore["editStep"]>(
+    (stepId, patch) => commit(updateStep(contentRef.current, stepId, patch)),
+    [commit]
+  );
+  const removeStep = useCallback<AdminStore["removeStep"]>(
+    (stepId) => commit(deleteStep(contentRef.current, stepId)),
+    [commit]
+  );
+  const moveSteps = useCallback<AdminStore["moveSteps"]>(
+    (partId, orderedIds) => commit(reorderSteps(contentRef.current, partId, orderedIds)),
+    [commit]
+  );
+  const addHint = useCallback<AdminStore["addHint"]>(
+    (stepId, input) => {
+      const { content: next, id } = createHint(contentRef.current, stepId, input);
+      commit(next);
+      return id;
+    },
+    [commit]
+  );
+  const editHint = useCallback<AdminStore["editHint"]>(
+    (hintId, patch) => commit(updateHint(contentRef.current, hintId, patch)),
+    [commit]
+  );
+  const removeHint = useCallback<AdminStore["removeHint"]>(
+    (hintId) => commit(deleteHint(contentRef.current, hintId)),
+    [commit]
+  );
+  const moveHints = useCallback<AdminStore["moveHints"]>(
+    (stepId, orderedIds) => commit(reorderHints(contentRef.current, stepId, orderedIds)),
+    [commit]
+  );
+
   return (
     <AdminStoreContext.Provider
       value={{
@@ -176,6 +242,14 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         editPart,
         removePart,
         moveParts,
+        addStep,
+        editStep,
+        removeStep,
+        moveSteps,
+        addHint,
+        editHint,
+        removeHint,
+        moveHints,
       }}
     >
       {children}

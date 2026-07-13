@@ -259,10 +259,14 @@ export function deleteStep(content: Content, stepId: string): Content {
     ...content,
     questions: content.questions.map((q) => ({
       ...q,
-      parts: q.parts.map((p) => ({
-        ...p,
-        steps: p.steps.filter((s) => s.id !== stepId),
-      })),
+      parts: q.parts.map((p) => {
+        if (!p.steps.some((s) => s.id === stepId)) return p;
+        const remaining = p.steps
+          .filter((s) => s.id !== stepId)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((s, i) => ({ ...s, number: i + 1, sortOrder: i + 1 }));
+        return { ...p, steps: remaining };
+      }),
     })),
   };
 }
@@ -283,7 +287,9 @@ export function reorderSteps(
           : {
               ...p,
               steps: p.steps.map((s) =>
-                order.has(s.id) ? { ...s, sortOrder: order.get(s.id) as number } : s
+                order.has(s.id)
+                  ? { ...s, sortOrder: order.get(s.id) as number, number: order.get(s.id) as number }
+                  : s
               ),
             }
       ),
@@ -338,7 +344,14 @@ export function updateHint(
 
 export function deleteHint(content: Content, hintId: string): Content {
   return mapSteps(content, (steps) =>
-    steps.map((s) => ({ ...s, hints: s.hints.filter((h) => h.id !== hintId) }))
+    steps.map((s) => {
+      if (!s.hints.some((h) => h.id === hintId)) return s;
+      const remaining = s.hints
+        .filter((h) => h.id !== hintId)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((h, i) => ({ ...h, number: i + 1, sortOrder: i + 1 }));
+      return { ...s, hints: remaining };
+    })
   );
 }
 
@@ -355,7 +368,9 @@ export function reorderHints(
         : {
             ...s,
             hints: s.hints.map((h) =>
-              order.has(h.id) ? { ...h, sortOrder: order.get(h.id) as number } : h
+              order.has(h.id)
+                ? { ...h, sortOrder: order.get(h.id) as number, number: order.get(h.id) as number }
+                : h
             ),
           }
     )

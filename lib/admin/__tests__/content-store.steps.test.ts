@@ -86,3 +86,42 @@ describe("reorderSteps", () => {
     expect(steps.find((s) => s.id === "s1")?.sortOrder).toBe(2);
   });
 });
+
+describe("step renumbering", () => {
+  it("renumbers remaining steps after a delete", () => {
+    let c = baseContent();
+    const two = createStep(c, "pa", {
+      promptLatex: "two",
+      answerType: "integer",
+      answerValue: 2,
+      explanationLatex: "",
+    });
+    c = two.content;
+    const three = createStep(c, "pa", {
+      promptLatex: "three",
+      answerType: "integer",
+      answerValue: 3,
+      explanationLatex: "",
+    });
+    c = three.content;
+    const next = deleteStep(c, "s1");
+    const steps = [...next.questions[0].parts[0].steps].sort(
+      (a, b) => a.sortOrder - b.sortOrder
+    );
+    expect(steps.map((s) => s.number)).toEqual([1, 2]);
+  });
+
+  it("renumbers steps to match a reorder", () => {
+    let c = baseContent();
+    const two = createStep(c, "pa", {
+      promptLatex: "two",
+      answerType: "integer",
+      answerValue: 2,
+      explanationLatex: "",
+    });
+    c = two.content;
+    const next = reorderSteps(c, "pa", [two.id, "s1"]);
+    expect(next.questions[0].parts[0].steps.find((s) => s.id === two.id)?.number).toBe(1);
+    expect(next.questions[0].parts[0].steps.find((s) => s.id === "s1")?.number).toBe(2);
+  });
+});

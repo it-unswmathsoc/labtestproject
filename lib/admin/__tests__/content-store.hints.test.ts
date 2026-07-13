@@ -80,3 +80,25 @@ describe("reorderHints", () => {
     expect(step(next).hints.find((x) => x.id === "h1")?.sortOrder).toBe(2);
   });
 });
+
+describe("hint renumbering", () => {
+  it("renumbers remaining hints after a delete", () => {
+    let c = baseContent();
+    const two = createHint(c, "s1", { bodyLatex: "two" });
+    c = two.content;
+    const three = createHint(c, "s1", { bodyLatex: "three" });
+    c = three.content;
+    const next = deleteHint(c, "h1");
+    const hints = [...step(next).hints].sort((a, b) => a.sortOrder - b.sortOrder);
+    expect(hints.map((h) => h.number)).toEqual([1, 2]);
+  });
+
+  it("renumbers hints to match a reorder", () => {
+    let c = baseContent();
+    const two = createHint(c, "s1", { bodyLatex: "two" });
+    c = two.content;
+    const next = reorderHints(c, "s1", [two.id, "h1"]);
+    expect(step(next).hints.find((h) => h.id === two.id)?.number).toBe(1);
+    expect(step(next).hints.find((h) => h.id === "h1")?.number).toBe(2);
+  });
+});

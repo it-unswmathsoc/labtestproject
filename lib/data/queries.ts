@@ -40,3 +40,20 @@ export async function getQuestionsForTest(testId: string): Promise<Question[]> {
       })),
     }));
 }
+
+export async function getQuestion(questionId: string): Promise<Question | null> {
+  const question = questions.find((q) => q.id === questionId);
+  if (!question) return null;
+  const test = await getLabTest(question.labTestId);
+  if (!test) return null;
+  return {
+    ...question,
+    parts: [...question.parts].sort(bySortOrder).map((p) => ({
+      ...p,
+      steps: [...p.steps].sort(bySortOrder).map((s) => ({
+        ...s,
+        hints: [...s.hints].sort(bySortOrder),
+      })),
+    })),
+  };
+}

@@ -5,6 +5,7 @@ import {
   getLabTestsForCourse,
   getLabTest,
   getQuestionsForTest,
+  getQuestion,
 } from "../queries";
 
 describe("data queries", () => {
@@ -55,5 +56,22 @@ describe("data queries", () => {
     first[0].parts[0].answerValue = 999;
     const second = await getQuestionsForTest("test-1081-lt1");
     expect(second[0].parts[0].answerValue).toBe(19);
+  });
+
+  it("returns a single question by id with sorted parts/steps/hints", async () => {
+    const q = await getQuestion("q-1081-lt1-1");
+    expect(q?.number).toBe(1);
+    expect(q?.parts.map((p) => p.label)).toEqual(["a", "b"]);
+    expect(q?.parts[0].steps.map((s) => s.number)).toEqual([1, 2]);
+    expect(q?.parts[0].steps[0].hints).toHaveLength(1);
+  });
+
+  it("returns null for an unknown question id", async () => {
+    expect(await getQuestion("q-nope")).toBeNull();
+  });
+
+  it("returns null for a question under an unpublished test", async () => {
+    // (no such fixture question today, but the guard must hold if one is added)
+    expect(await getQuestion("q-does-not-exist")).toBeNull();
   });
 });

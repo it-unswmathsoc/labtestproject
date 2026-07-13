@@ -38,13 +38,20 @@ Each grader is one file with one responsibility. The dispatcher is the only thin
 
 - [ ] **Step 1: Run create-next-app in the current directory**
 
-The repo already contains `docs/` and a source `.md` file; create-next-app coexists with those (it only refuses if *conflicting* files like `package.json` already exist).
+`create-next-app` refuses to scaffold into a directory containing files it doesn't whitelist (our `docs/` and `MATH1081__Lab_Test_1 2026.md` would block it; `.git/` is allowed). So temporarily move those aside, scaffold, then move them back.
 
-Run:
+Run (non-interactive — all options passed as flags):
 ```bash
-npx create-next-app@latest . --typescript --tailwind --app --eslint --no-src-dir --import-alias "@/*" --use-npm
+mkdir -p ../.labtest-preserve
+mv docs "MATH1081__Lab_Test_1 2026.md" ../.labtest-preserve/
+npx create-next-app@latest . --typescript --tailwind --app --eslint --no-src-dir --import-alias "@/*" --use-npm --turbopack
+mv ../.labtest-preserve/docs .
+mv "../.labtest-preserve/MATH1081__Lab_Test_1 2026.md" .
+rmdir ../.labtest-preserve
 ```
-When prompted about Turbopack, accept the default (Yes). If it warns the directory is not empty, choose to proceed — the existing `docs/`, `.git/`, and `MATH1081__Lab_Test_1 2026.md` do not conflict.
+Notes:
+- `.git/` stays in place and is whitelisted by create-next-app, so it won't be reinitialized.
+- If create-next-app still reports the directory is not empty, run `ls -la` to find the offending file, move it into `../.labtest-preserve/` too, retry, then move it back.
 
 - [ ] **Step 2: Verify the dev toolchain builds**
 

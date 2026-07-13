@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLabTest, getQuestionsForTest } from "@/lib/data/queries";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -58,13 +59,12 @@ export default async function TestOverviewPage({
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                disabled
-                className="mt-4 cursor-not-allowed rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-400"
+              <Link
+                href={`/tests/${testId}/q/${q.id}`}
+                className="mt-4 inline-block rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
               >
-                Practice (coming in the next release)
-              </button>
+                Practise this question →
+              </Link>
             </li>
           ))}
         </ol>

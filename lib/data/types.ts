@@ -33,6 +33,8 @@ export interface QuestionPart {
   questionId: string;
   label: string; // "a", "b.i"
   promptLatex: string;
+  imageUrl?: string; // optional diagram (e.g. an arrow diagram), served from /public
+  imageAlt?: string;
   answerType: AnswerType;
   answerValue: AnswerValue;
   answerConfig?: AnswerConfig;

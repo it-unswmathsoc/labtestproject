@@ -200,6 +200,9 @@ export const questions: Question[] = [
         questionId: "q-1081-lt1-8",
         label: "a",
         promptLatex: "Select all properties that hold.",
+        imageUrl: "/questions/math1081-lt1-q8a.png",
+        imageAlt:
+          "Arrow diagram on four nodes labelled 1 to 4, showing the relation for part (a).",
         answerType: "multi_select",
         answerValue: { selected: ["reflexive", "symmetric", "transitive"] },
         answerConfig: {

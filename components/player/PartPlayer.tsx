@@ -24,6 +24,14 @@ export function PartPlayer({
         <span className="font-medium">{part.label}) </span>
         <RichText>{part.promptLatex}</RichText>
       </div>
+      {part.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- static diagram, no layout benefit from next/image
+        <img
+          src={part.imageUrl}
+          alt={part.imageAlt ?? ""}
+          className="mb-3 max-w-xs rounded-md border border-gray-200"
+        />
+      ) : null}
       {part.steps.length > 0 ? (
         <div className="space-y-3">
           {part.steps.map((step) => (

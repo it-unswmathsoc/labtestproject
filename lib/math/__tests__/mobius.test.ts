@@ -49,4 +49,28 @@ describe("mobiusToLatex", () => {
   it("wraps free text in \\text", () => {
     expect(mobiusToLatex("Bijective", "text")).toBe("\\text{Bijective}");
   });
+
+  it("falls back to the raw value when no single_choice option matches", () => {
+    expect(
+      mobiusToLatex("unknown", "single_choice", {
+        options: [{ value: "injective", label: "injective" }],
+      })
+    ).toBe("\\text{unknown}");
+  });
+
+  it("falls back to raw values for unmatched multi_select entries", () => {
+    expect(
+      mobiusToLatex("reflexive,unknown", "multi_select", {
+        options: [{ value: "reflexive", label: "Reflexive" }],
+      })
+    ).toBe("\\text{Reflexive, unknown}");
+  });
+
+  it("returns set_of_integers input unchanged when it is not set() syntax", () => {
+    expect(mobiusToLatex("42", "set_of_integers")).toBe("42");
+  });
+
+  it("leaves a non-numeric exponent untouched", () => {
+    expect(mobiusToLatex("x^y", "expression")).toBe("x^y");
+  });
 });

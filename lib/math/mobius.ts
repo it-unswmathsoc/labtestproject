@@ -44,6 +44,8 @@ function exponentToLatex(value: string): string {
   return value.replace(/\^(-?\d+)/g, "^{$1}").replace(/\*/g, "\\times ");
 }
 
+// Assumes `value` is admin-authored plain prose with no LaTeX-special characters
+// ({, }, \, $, %, &, ^, ~). If a label ever needs those, escape before wrapping.
 function textLatex(value: string): string {
   return `\\text{${value}}`;
 }

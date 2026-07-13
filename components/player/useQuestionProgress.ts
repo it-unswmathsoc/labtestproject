@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { startTransition, useCallback, useEffect, useState } from "react";
 
 interface Progress {
   steps: string[];
@@ -16,9 +16,10 @@ export function useQuestionProgress(questionId: string) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(keyFor(questionId));
-      setProgress(raw ? (JSON.parse(raw) as Progress) : emptyProgress);
+      const next = raw ? (JSON.parse(raw) as Progress) : emptyProgress;
+      startTransition(() => setProgress(next));
     } catch {
-      setProgress(emptyProgress);
+      startTransition(() => setProgress(emptyProgress));
     }
   }, [questionId]);
 

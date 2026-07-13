@@ -1,0 +1,54 @@
+"use client";
+
+import { use } from "react";
+import { notFound } from "next/navigation";
+import { useAdminStore } from "@/components/admin/AdminStoreProvider";
+import { TestForm } from "@/components/admin/TestForm";
+import { PageHeader } from "@/components/ui/PageHeader";
+
+export default function EditTestPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const { content, editTest } = useAdminStore();
+  const test = content.labTests.find((t) => t.id === id);
+  if (!test) notFound();
+
+  const questionCount = content.questions.filter(
+    (q) => q.labTestId === id
+  ).length;
+
+  return (
+    <div>
+      <PageHeader
+        title={`Edit: ${test.name}`}
+        subtitle={`${questionCount} question${questionCount === 1 ? "" : "s"}`}
+      />
+      <TestForm
+        courses={content.courses}
+        submitLabel="Save"
+        initial={{
+          courseId: test.courseId,
+          name: test.name,
+          term: test.term ?? "",
+          description: test.description ?? "",
+          isPublished: test.isPublished,
+        }}
+        onSubmit={(values) =>
+          editTest(id, {
+            courseId: values.courseId,
+            name: values.name,
+            term: values.term || undefined,
+            description: values.description || undefined,
+            isPublished: values.isPublished,
+          })
+        }
+      />
+      <p className="mt-8 text-sm text-gray-500">
+        Question authoring is coming next.
+      </p>
+    </div>
+  );
+}

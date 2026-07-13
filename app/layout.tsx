@@ -31,6 +31,9 @@ export default function RootLayout({
             <Link href="/" className="font-semibold text-gray-900">
               MathSoc Lab Test Practice
             </Link>
+            <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-800">
+              Admin
+            </Link>
           </div>
         </header>
         <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>

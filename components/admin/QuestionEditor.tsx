@@ -5,10 +5,12 @@ import type { Question } from "@/lib/data/types";
 import { useAdminStore } from "./AdminStoreProvider";
 import { LatexField } from "./LatexField";
 import { PartsEditor } from "./PartsEditor";
+import { QuestionPreview } from "./QuestionPreview";
 
 export function QuestionEditor({ question }: { question: Question }) {
   const { editQuestion, removeQuestion } = useAdminStore();
   const [open, setOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   return (
     <div className="rounded-lg border border-gray-200 p-4">
@@ -50,6 +52,20 @@ export function QuestionEditor({ question }: { question: Question }) {
             onChange={(v) => editQuestion(question.id, { noteLatex: v || undefined })}
           />
           <PartsEditor question={question} />
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowPreview((p) => !p)}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              {showPreview ? "Hide preview" : "Show preview"}
+            </button>
+            {showPreview ? (
+              <div className="mt-2">
+                <QuestionPreview question={question} />
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

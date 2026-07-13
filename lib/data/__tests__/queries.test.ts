@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   getCourses,
   getCourseByCode,
+  getCourseById,
   getLabTestsForCourse,
   getLabTest,
   getQuestionsForTest,
@@ -17,6 +18,15 @@ describe("data queries", () => {
   it("looks up a course by code case-insensitively", async () => {
     const course = await getCourseByCode("math1081");
     expect(course?.name).toBe("Discrete Mathematics");
+  });
+
+  it("looks up a course by id", async () => {
+    const course = await getCourseById("course-math1081");
+    expect(course?.code).toBe("MATH1081");
+  });
+
+  it("returns null for an unknown course id", async () => {
+    expect(await getCourseById("course-nope")).toBeNull();
   });
 
   it("returns null for an unknown course code", async () => {

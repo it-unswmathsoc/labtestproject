@@ -13,6 +13,10 @@ export async function getCourseByCode(code: string): Promise<Course | null> {
   return courses.find((c) => c.code.toLowerCase() === target) ?? null;
 }
 
+export async function getCourseById(courseId: string): Promise<Course | null> {
+  return courses.find((c) => c.id === courseId) ?? null;
+}
+
 export async function getLabTestsForCourse(courseId: string): Promise<LabTest[]> {
   return labTests
     .filter((t) => t.courseId === courseId && t.isPublished)

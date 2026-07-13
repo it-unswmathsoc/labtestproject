@@ -32,9 +32,14 @@ export default async function TestOverviewPage({
               <h2 className="mb-2 text-lg font-semibold text-gray-900">
                 Question {q.number}
               </h2>
-              <div className="mb-4 text-gray-800">
+              <div className="mb-2 text-gray-800">
                 <RichText>{q.promptLatex}</RichText>
               </div>
+              {q.noteLatex ? (
+                <div className="mb-4 text-sm italic text-gray-500">
+                  <RichText>{q.noteLatex}</RichText>
+                </div>
+              ) : null}
               <div className="space-y-3">
                 {q.parts.map((part) => (
                   <div key={part.id} className="border-l-2 border-gray-100 pl-4">

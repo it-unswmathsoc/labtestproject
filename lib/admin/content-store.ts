@@ -1,5 +1,5 @@
 import type { Content } from "./types";
-import type { LabTest, Question, QuestionPart, Step } from "@/lib/data/types";
+import type { LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import { courses, labTests, questions } from "@/lib/data/fixtures";
 
@@ -289,4 +289,75 @@ export function reorderSteps(
       ),
     })),
   };
+}
+
+function mapSteps(content: Content, fn: (steps: Step[]) => Step[]): Content {
+  return {
+    ...content,
+    questions: content.questions.map((q) => ({
+      ...q,
+      parts: q.parts.map((p) => ({ ...p, steps: fn(p.steps) })),
+    })),
+  };
+}
+
+export function createHint(
+  content: Content,
+  stepId: string,
+  input: { bodyLatex: string }
+): { content: Content; id: string } {
+  const id = newId("hint");
+  const next = mapSteps(content, (steps) =>
+    steps.map((s) => {
+      if (s.id !== stepId) return s;
+      const number = s.hints.length
+        ? Math.max(...s.hints.map((h) => h.number)) + 1
+        : 1;
+      const sortOrder = s.hints.length
+        ? Math.max(...s.hints.map((h) => h.sortOrder)) + 1
+        : 1;
+      const hint: Hint = { id, stepId, number, sortOrder, bodyLatex: input.bodyLatex };
+      return { ...s, hints: [...s.hints, hint] };
+    })
+  );
+  return { content: next, id };
+}
+
+export function updateHint(
+  content: Content,
+  hintId: string,
+  patch: Partial<Omit<Hint, "id" | "stepId">>
+): Content {
+  return mapSteps(content, (steps) =>
+    steps.map((s) => ({
+      ...s,
+      hints: s.hints.map((h) => (h.id === hintId ? { ...h, ...patch } : h)),
+    }))
+  );
+}
+
+export function deleteHint(content: Content, hintId: string): Content {
+  return mapSteps(content, (steps) =>
+    steps.map((s) => ({ ...s, hints: s.hints.filter((h) => h.id !== hintId) }))
+  );
+}
+
+export function reorderHints(
+  content: Content,
+  stepId: string,
+  orderedIds: string[]
+): Content {
+  const order = new Map(orderedIds.map((id, i) => [id, i + 1]));
+  return mapSteps(content, (steps) =>
+    steps.map((s) =>
+      s.id !== stepId
+        ? s
+        : {
+            ...s,
+            hints: s.hints.map((h) =>
+              order.has(h.id) ? { ...h, sortOrder: order.get(h.id) as number } : h
+            ),
+          }
+    )
+  );
 }

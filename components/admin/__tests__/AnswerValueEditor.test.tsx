@@ -51,4 +51,81 @@ describe("AnswerValueEditor", () => {
       expect.objectContaining({ answerValue: { text: "Bijective" } })
     );
   });
+
+  it("edits an expression answer", async () => {
+    const onChange = vi.fn();
+    render(
+      <AnswerValueEditor
+        answerType="expression"
+        answerValue={{ mobius: "" }}
+        onChange={onChange}
+      />
+    );
+    await userEvent.type(screen.getByLabelText(/correct answer/i), "2^100");
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ answerValue: { mobius: "2^100" } })
+    );
+  });
+
+  it("adds an option to a choice type", async () => {
+    const onChange = vi.fn();
+    render(
+      <AnswerValueEditor
+        answerType="single_choice"
+        answerValue={{ choice: "" }}
+        answerConfig={{ options: [] }}
+        onChange={onChange}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: /add option/i }));
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        answerConfig: expect.objectContaining({
+          options: [expect.objectContaining({ value: "opt1" })],
+        }),
+      })
+    );
+  });
+
+  it("marks the correct single_choice option", async () => {
+    const onChange = vi.fn();
+    render(
+      <AnswerValueEditor
+        answerType="single_choice"
+        answerValue={{ choice: "" }}
+        answerConfig={{
+          options: [
+            { value: "inj", label: "injective" },
+            { value: "ns", label: "not surjective" },
+          ],
+        }}
+        onChange={onChange}
+      />
+    );
+    await userEvent.click(screen.getByLabelText("Correct: ns"));
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ answerValue: { choice: "ns" } })
+    );
+  });
+
+  it("toggles a correct multi_select option", async () => {
+    const onChange = vi.fn();
+    render(
+      <AnswerValueEditor
+        answerType="multi_select"
+        answerValue={{ selected: [] }}
+        answerConfig={{
+          options: [
+            { value: "r", label: "Reflexive" },
+            { value: "s", label: "Symmetric" },
+          ],
+        }}
+        onChange={onChange}
+      />
+    );
+    await userEvent.click(screen.getByLabelText("Correct: r"));
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ answerValue: { selected: ["r"] } })
+    );
+  });
 });

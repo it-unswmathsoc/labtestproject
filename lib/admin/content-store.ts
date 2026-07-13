@@ -1,5 +1,6 @@
 import type { Content } from "./types";
-import type { LabTest, Question } from "@/lib/data/types";
+import type { LabTest, Question, QuestionPart } from "@/lib/data/types";
+import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import { courses, labTests, questions } from "@/lib/data/fixtures";
 
 export function seedContent(): Content {
@@ -123,6 +124,81 @@ export function reorderQuestions(
       q.labTestId === testId && order.has(q.id)
         ? { ...q, sortOrder: order.get(q.id) as number }
         : q
+    ),
+  };
+}
+
+export function createPart(
+  content: Content,
+  questionId: string,
+  input: {
+    label: string;
+    promptLatex: string;
+    imageUrl?: string;
+    imageAlt?: string;
+    answerType: AnswerType;
+    answerValue: AnswerValue;
+    answerConfig?: AnswerConfig;
+  }
+): { content: Content; id: string } {
+  const id = newId("part");
+  return {
+    content: {
+      ...content,
+      questions: content.questions.map((q) => {
+        if (q.id !== questionId) return q;
+        const sortOrder = q.parts.length
+          ? Math.max(...q.parts.map((p) => p.sortOrder)) + 1
+          : 1;
+        const part: QuestionPart = { id, questionId, sortOrder, steps: [], ...input };
+        return { ...q, parts: [...q.parts, part] };
+      }),
+    },
+    id,
+  };
+}
+
+export function updatePart(
+  content: Content,
+  partId: string,
+  patch: Partial<Omit<QuestionPart, "id" | "questionId" | "steps">>
+): Content {
+  return {
+    ...content,
+    questions: content.questions.map((q) => ({
+      ...q,
+      parts: q.parts.map((p) => (p.id === partId ? { ...p, ...patch } : p)),
+    })),
+  };
+}
+
+export function deletePart(content: Content, partId: string): Content {
+  return {
+    ...content,
+    questions: content.questions.map((q) => ({
+      ...q,
+      parts: q.parts.filter((p) => p.id !== partId),
+    })),
+  };
+}
+
+export function reorderParts(
+  content: Content,
+  questionId: string,
+  orderedIds: string[]
+): Content {
+  const order = new Map(orderedIds.map((id, i) => [id, i + 1]));
+  return {
+    ...content,
+    questions: content.questions.map((q) =>
+      q.id !== questionId
+        ? q
+        : {
+            ...q,
+            parts: q.parts.map((p) =>
+              order.has(p.id) ? { ...p, sortOrder: order.get(p.id) as number } : p
+            ),
+          }
     ),
   };
 }

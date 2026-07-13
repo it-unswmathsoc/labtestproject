@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { useAdminStore } from "@/components/admin/AdminStoreProvider";
 import { TestForm } from "@/components/admin/TestForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { QuestionsEditor } from "@/components/admin/QuestionsEditor";
 
 export default function EditTestPage({
   params,
@@ -46,9 +47,7 @@ export default function EditTestPage({
           })
         }
       />
-      <p className="mt-8 text-sm text-gray-500">
-        Question authoring is coming next.
-      </p>
+      <QuestionsEditor testId={id} />
     </div>
   );
 }

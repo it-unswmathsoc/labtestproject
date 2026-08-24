@@ -2,8 +2,8 @@ export function PageHeader({
   title,
   subtitle,
 }: {
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
 }) {
   return (
     <div className="mb-6">

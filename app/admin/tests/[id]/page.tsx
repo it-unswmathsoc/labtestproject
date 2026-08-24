@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { useAdminStore } from "@/components/admin/AdminStoreProvider";
 import { TestForm } from "@/components/admin/TestForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { RichText } from "@/components/math/RichText";
 import { QuestionsEditor } from "@/components/admin/QuestionsEditor";
 
 export default function EditTestPage({
@@ -24,7 +25,7 @@ export default function EditTestPage({
   return (
     <div>
       <PageHeader
-        title={`Edit: ${test.name}`}
+        title={<>Edit: <RichText>{test.name}</RichText></>}
         subtitle={`${questionCount} question${questionCount === 1 ? "" : "s"}`}
       />
       <TestForm

@@ -7,8 +7,8 @@ export function Card({
   children,
 }: {
   href?: string;
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const inner = (

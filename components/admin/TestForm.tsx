@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Course } from "@/lib/data/types";
+import { LatexField } from "./LatexField";
 
 export interface TestFormValues {
   courseId: string;
@@ -59,34 +60,29 @@ export function TestForm({
         </select>
       </label>
 
-      <label className="block text-sm font-medium text-gray-700">
-        Name
-        <input
-          className={inputClass}
-          value={values.name}
-          onChange={(e) => set("name", e.target.value)}
-          required
-        />
-      </label>
+      <LatexField
+        label="Name"
+        rows={2}
+        required
+        value={values.name}
+        onChange={(v) => set("name", v)}
+        placeholder="Vectors in $\\mathbb{R}^n$"
+      />
 
-      <label className="block text-sm font-medium text-gray-700">
-        Term
-        <input
-          className={inputClass}
-          value={values.term}
-          onChange={(e) => set("term", e.target.value)}
-        />
-      </label>
+      <LatexField
+        label="Term"
+        rows={2}
+        value={values.term}
+        onChange={(v) => set("term", v)}
+        placeholder="2026 T1"
+      />
 
-      <label className="block text-sm font-medium text-gray-700">
-        Description
-        <textarea
-          className={inputClass}
-          rows={3}
-          value={values.description}
-          onChange={(e) => set("description", e.target.value)}
-        />
-      </label>
+      <LatexField
+        label="Description"
+        value={values.description}
+        onChange={(v) => set("description", v)}
+        placeholder="Covers $\\vec{u} \\cdot \\vec{v}$ and projections."
+      />
 
       <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <input

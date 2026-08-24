@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAdminStore } from "@/components/admin/AdminStoreProvider";
 import { SortableList } from "@/components/admin/SortableList";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { RichText } from "@/components/math/RichText";
 
 export default function AdminDashboard() {
   const { content, removeTest, moveTests } = useAdminStore();
@@ -43,11 +44,11 @@ export default function AdminDashboard() {
                       <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
                         <div>
                           <span className="font-medium text-gray-900">
-                            {test.name}
+                            <RichText>{test.name}</RichText>
                           </span>
                           {test.term ? (
                             <span className="ml-2 text-sm text-gray-500">
-                              {test.term}
+                              <RichText>{test.term}</RichText>
                             </span>
                           ) : null}
                           <span

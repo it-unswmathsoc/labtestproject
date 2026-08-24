@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLabTest, getQuestionsForTest } from "@/lib/data/queries";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { RichText } from "@/components/math/RichText";
 
 export const revalidate = 3600;
 
@@ -16,15 +17,26 @@ export default async function TestStartPage({
 
   const questions = await getQuestionsForTest(testId);
   const count = questions.length;
-  const subtitle = [test.term, `${count} question${count === 1 ? "" : "s"}`]
-    .filter(Boolean)
-    .join(" · ");
+  const countLabel = `${count} question${count === 1 ? "" : "s"}`;
 
   return (
     <div>
-      <PageHeader title={test.name} subtitle={subtitle} />
+      <PageHeader
+        title={<RichText>{test.name}</RichText>}
+        subtitle={
+          test.term ? (
+            <>
+              <RichText>{test.term}</RichText> · {countLabel}
+            </>
+          ) : (
+            countLabel
+          )
+        }
+      />
       {test.description ? (
-        <p className="mb-8 max-w-2xl text-gray-700">{test.description}</p>
+        <p className="mb-8 max-w-2xl text-gray-700">
+          <RichText>{test.description}</RichText>
+        </p>
       ) : null}
       {count > 0 ? (
         <Link

@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { QuestionPart } from "@/lib/data/types";
+import { createClient } from "@/lib/supabase/client";
 import { useAdminStore } from "./AdminStoreProvider";
 import { LatexField } from "./LatexField";
 import { AnswerValueEditor } from "./AnswerValueEditor";
@@ -9,8 +11,33 @@ import { StepsEditor } from "./StepsEditor";
 const inputClass =
   "mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900";
 
+const BUCKET = "question-images";
+
 export function PartEditor({ part }: { part: QuestionPart }) {
   const { editPart, removePart } = useAdminStore();
+  const [uploadError, setUploadError] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function uploadImage(file: File) {
+    setIsUploading(true);
+    setUploadError("");
+
+    const supabase = createClient();
+    const path = `${part.id}/${file.name}`;
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file, { upsert: true });
+
+    if (error) {
+      setUploadError(error.message);
+      setIsUploading(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    editPart(part.id, { imageUrl: data.publicUrl });
+    setIsUploading(false);
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 p-4">
@@ -46,7 +73,7 @@ export function PartEditor({ part }: { part: QuestionPart }) {
 
         <label className="block">
           <span className="text-sm font-medium text-gray-700">
-            Image URL (optional, served from /public)
+            Image URL (optional)
           </span>
           <input
             type="text"
@@ -58,6 +85,33 @@ export function PartEditor({ part }: { part: QuestionPart }) {
             }
           />
         </label>
+
+        <div>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">
+              …or upload a diagram
+            </span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              disabled={isUploading}
+              className="mt-1 block w-full text-sm text-gray-600"
+              // Clear the selection so re-picking the same file still fires
+              // change — otherwise retrying after a failed upload does nothing.
+              onClick={(e) => (e.currentTarget.value = "")}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) uploadImage(file);
+              }}
+            />
+          </label>
+          {isUploading ? (
+            <p className="mt-1 text-sm text-gray-500">Uploading…</p>
+          ) : null}
+          {uploadError ? (
+            <p className="mt-1 text-sm text-red-600">{uploadError}</p>
+          ) : null}
+        </div>
 
         <label className="block">
           <span className="text-sm font-medium text-gray-700">

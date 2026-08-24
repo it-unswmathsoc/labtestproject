@@ -10,7 +10,6 @@ import {
 } from "react";
 import type { Content } from "@/lib/admin/types";
 import {
-  seedContent,
   createTest,
   updateTest,
   deleteTest,
@@ -34,11 +33,16 @@ import {
 } from "@/lib/admin/content-store";
 import type { LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
+import * as db from "@/lib/supabase/admin-mutations";
+import { MutationQueue } from "@/lib/supabase/mutation-queue";
+import { revalidatePaths } from "@/lib/supabase/revalidate";
 
-const STORAGE_KEY = "labtest:admin:content";
+const EMPTY: Content = { courses: [], labTests: [], questions: [] };
 
 interface AdminStore {
   content: Content;
+  isLoading: boolean;
+  error: string;
   addTest: (input: {
     courseId: string;
     name: string;
@@ -90,146 +94,360 @@ interface AdminStore {
 const AdminStoreContext = createContext<AdminStore | null>(null);
 
 export function AdminStoreProvider({ children }: { children: React.ReactNode }) {
-  const [content, setContent] = useState<Content>(seedContent);
-  const contentRef = useRef<Content>(content);
+  const [content, setContent] = useState<Content>(EMPTY);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const contentRef = useRef<Content>(EMPTY);
+  const queueRef = useRef<MutationQueue>(null);
+  queueRef.current ??= new MutationQueue();
 
-  // Hydrate from localStorage after mount (kept out of render so SSR and the
-  // client's first paint agree).
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Content;
-        contentRef.current = parsed;
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time hydration
-        setContent(parsed);
-      }
-    } catch {
-      // ignore malformed storage
-    }
-  }, []);
-
-  const commit = useCallback((next: Content) => {
+  const apply = useCallback((next: Content) => {
     contentRef.current = next;
     setContent(next);
+  }, []);
+
+  const load = useCallback(async () => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // ignore storage errors
+      const fetched = await db.fetchContent();
+      contentRef.current = fetched;
+      setContent(fetched);
+      setError("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch
+    void load();
+  }, [load]);
+
+  /** Locates a row's ancestry so the queue can prune descendants of a delete. */
+  const ancestry = useCallback((id: string): string[] => {
+    const { labTests, questions } = contentRef.current;
+    if (labTests.some((t) => t.id === id)) return [id];
+
+    for (const question of questions) {
+      if (question.id === id) return [question.labTestId, id];
+      for (const part of question.parts) {
+        if (part.id === id) return [question.labTestId, question.id, id];
+        for (const step of part.steps) {
+          if (step.id === id) return [question.labTestId, question.id, part.id, id];
+          for (const hint of step.hints) {
+            if (hint.id === id) {
+              return [question.labTestId, question.id, part.id, step.id, id];
+            }
+          }
+        }
+      }
+    }
+    return [id];
+  }, []);
+
+  /** Paths students can see. Only routes that set `revalidate` need busting. */
+  const affectedPaths = useCallback((testId?: string): string[] => {
+    const { courses, labTests } = contentRef.current;
+    const paths = ["/"];
+    const test = labTests.find((t) => t.id === testId);
+    if (!test) return paths;
+
+    const course = courses.find((c) => c.id === test.courseId);
+    if (course) paths.push(`/courses/${course.code}`);
+    paths.push(`/tests/${test.id}`);
+    return paths;
+  }, []);
+
+  const write = useCallback(
+    (scope: string[], run: () => Promise<unknown>, paths: string[]) => {
+      const queue = queueRef.current!;
+      queue
+        .enqueue(scope, run)
+        .then(() => queue.whenIdle())
+        .then(() => revalidatePaths(paths))
+        .catch((cause: unknown) => {
+          setError(cause instanceof Error ? cause.message : String(cause));
+          void load();
+        });
+    },
+    [load]
+  );
+
+  const testIdOf = useCallback((id: string) => ancestry(id)[0], [ancestry]);
 
   const addTest = useCallback<AdminStore["addTest"]>(
     (input) => {
       const { content: next, id } = createTest(contentRef.current, input);
-      commit(next);
+      apply(next);
+      const test = next.labTests.find((t) => t.id === id)!;
+      write([id], () => db.insertLabTest(test), affectedPaths(id));
       return id;
     },
-    [commit]
+    [affectedPaths, apply, write]
   );
 
   const editTest = useCallback<AdminStore["editTest"]>(
-    (id, patch) => commit(updateTest(contentRef.current, id, patch)),
-    [commit]
+    (id, patch) => {
+      // A course change moves the test between two /courses pages; the one it
+      // left goes stale unless it is busted too.
+      const before = affectedPaths(id);
+      apply(updateTest(contentRef.current, id, patch));
+      const paths = [...new Set([...before, ...affectedPaths(id)])];
+      write([id], () => db.updateLabTest(id, patch), paths);
+    },
+    [affectedPaths, apply, write]
   );
 
   const removeTest = useCallback<AdminStore["removeTest"]>(
-    (id) => commit(deleteTest(contentRef.current, id)),
-    [commit]
+    (id) => {
+      const paths = affectedPaths(id);
+      apply(deleteTest(contentRef.current, id));
+      queueRef.current!.prune([id]);
+      write([id], () => db.deleteRow("lab_tests", id), paths);
+    },
+    [affectedPaths, apply, write]
   );
 
   const moveTests = useCallback<AdminStore["moveTests"]>(
-    (courseId, orderedIds) =>
-      commit(reorderTests(contentRef.current, courseId, orderedIds)),
-    [commit]
+    (courseId, orderedIds) => {
+      apply(reorderTests(contentRef.current, courseId, orderedIds));
+      write(
+        orderedIds,
+        () => db.reorder("reorder_lab_tests", courseId, orderedIds),
+        affectedPaths(orderedIds[0])
+      );
+    },
+    [affectedPaths, apply, write]
   );
 
   const addQuestion = useCallback<AdminStore["addQuestion"]>(
     (testId, input) => {
       const { content: next, id } = createQuestion(contentRef.current, testId, input);
-      commit(next);
+      apply(next);
+      const question = next.questions.find((q) => q.id === id)!;
+      write([testId, id], () => db.insertQuestion(question), affectedPaths(testId));
       return id;
     },
-    [commit]
+    [affectedPaths, apply, write]
   );
+
   const editQuestion = useCallback<AdminStore["editQuestion"]>(
-    (id, patch) => commit(updateQuestion(contentRef.current, id, patch)),
-    [commit]
+    (id, patch) => {
+      const testId = testIdOf(id);
+      apply(updateQuestion(contentRef.current, id, patch));
+      write([testId, id], () => db.updateQuestion(id, patch), affectedPaths(testId));
+    },
+    [affectedPaths, apply, testIdOf, write]
   );
+
   const removeQuestion = useCallback<AdminStore["removeQuestion"]>(
-    (id) => commit(deleteQuestion(contentRef.current, id)),
-    [commit]
+    (id) => {
+      const scope = ancestry(id);
+      const paths = affectedPaths(scope[0]);
+      apply(deleteQuestion(contentRef.current, id));
+      queueRef.current!.prune(scope);
+      write(scope, () => db.deleteRow("questions", id), paths);
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const moveQuestions = useCallback<AdminStore["moveQuestions"]>(
-    (testId, orderedIds) => commit(reorderQuestions(contentRef.current, testId, orderedIds)),
-    [commit]
+    (testId, orderedIds) => {
+      apply(reorderQuestions(contentRef.current, testId, orderedIds));
+      write(
+        [testId, ...orderedIds],
+        () => db.reorder("reorder_questions", testId, orderedIds),
+        affectedPaths(testId)
+      );
+    },
+    [affectedPaths, apply, write]
   );
+
   const addPart = useCallback<AdminStore["addPart"]>(
     (questionId, input) => {
+      const testId = testIdOf(questionId);
       const { content: next, id } = createPart(contentRef.current, questionId, input);
-      commit(next);
+      apply(next);
+      const part = next.questions.flatMap((q) => q.parts).find((p) => p.id === id)!;
+      write([testId, questionId, id], () => db.insertPart(part), affectedPaths(testId));
       return id;
     },
-    [commit]
+    [affectedPaths, apply, testIdOf, write]
   );
+
   const editPart = useCallback<AdminStore["editPart"]>(
-    (partId, patch) => commit(updatePart(contentRef.current, partId, patch)),
-    [commit]
+    (partId, patch) => {
+      const scope = ancestry(partId);
+      apply(updatePart(contentRef.current, partId, patch));
+      write(scope, () => db.updatePart(partId, patch), affectedPaths(scope[0]));
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const removePart = useCallback<AdminStore["removePart"]>(
-    (partId) => commit(deletePart(contentRef.current, partId)),
-    [commit]
+    (partId) => {
+      const scope = ancestry(partId);
+      const paths = affectedPaths(scope[0]);
+      apply(deletePart(contentRef.current, partId));
+      queueRef.current!.prune(scope);
+      write(scope, () => db.deleteRow("question_parts", partId), paths);
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const moveParts = useCallback<AdminStore["moveParts"]>(
-    (questionId, orderedIds) => commit(reorderParts(contentRef.current, questionId, orderedIds)),
-    [commit]
+    (questionId, orderedIds) => {
+      const testId = testIdOf(questionId);
+      apply(reorderParts(contentRef.current, questionId, orderedIds));
+      write(
+        [testId, questionId, ...orderedIds],
+        () => db.reorder("reorder_parts", questionId, orderedIds),
+        affectedPaths(testId)
+      );
+    },
+    [affectedPaths, apply, testIdOf, write]
   );
 
   const addStep = useCallback<AdminStore["addStep"]>(
     (partId, input) => {
+      const parentScope = ancestry(partId);
       const { content: next, id } = createStep(contentRef.current, partId, input);
-      commit(next);
+      apply(next);
+      const step = next.questions
+        .flatMap((q) => q.parts)
+        .flatMap((p) => p.steps)
+        .find((s) => s.id === id)!;
+      write(
+        [...parentScope, id],
+        () => db.insertStep(step),
+        affectedPaths(parentScope[0])
+      );
       return id;
     },
-    [commit]
+    [affectedPaths, ancestry, apply, write]
   );
+
   const editStep = useCallback<AdminStore["editStep"]>(
-    (stepId, patch) => commit(updateStep(contentRef.current, stepId, patch)),
-    [commit]
+    (stepId, patch) => {
+      const scope = ancestry(stepId);
+      apply(updateStep(contentRef.current, stepId, patch));
+      write(scope, () => db.updateStep(stepId, patch), affectedPaths(scope[0]));
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const removeStep = useCallback<AdminStore["removeStep"]>(
-    (stepId) => commit(deleteStep(contentRef.current, stepId)),
-    [commit]
+    (stepId) => {
+      const scope = ancestry(stepId);
+      const partId = scope[2];
+      const paths = affectedPaths(scope[0]);
+      const next = deleteStep(contentRef.current, stepId);
+      // Snapshot the survivors now. Reading contentRef after the delete resolves
+      // would pick up a step added in the meantime, whose row does not exist yet.
+      const part = next.questions.flatMap((q) => q.parts).find((p) => p.id === partId);
+      const remaining = part ? part.steps.map((s) => s.id) : [];
+      apply(next);
+      queueRef.current!.prune(scope);
+      write(
+        scope,
+        async () => {
+          await db.deleteRow("steps", stepId);
+          // deleteStep renumbers the survivors; persist that.
+          if (remaining.length) await db.reorder("reorder_steps", partId, remaining);
+        },
+        paths
+      );
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const moveSteps = useCallback<AdminStore["moveSteps"]>(
-    (partId, orderedIds) => commit(reorderSteps(contentRef.current, partId, orderedIds)),
-    [commit]
+    (partId, orderedIds) => {
+      const scope = ancestry(partId);
+      apply(reorderSteps(contentRef.current, partId, orderedIds));
+      write(
+        [...scope, ...orderedIds],
+        () => db.reorder("reorder_steps", partId, orderedIds),
+        affectedPaths(scope[0])
+      );
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const addHint = useCallback<AdminStore["addHint"]>(
     (stepId, input) => {
+      const parentScope = ancestry(stepId);
       const { content: next, id } = createHint(contentRef.current, stepId, input);
-      commit(next);
+      apply(next);
+      const hint = next.questions
+        .flatMap((q) => q.parts)
+        .flatMap((p) => p.steps)
+        .flatMap((s) => s.hints)
+        .find((h) => h.id === id)!;
+      write(
+        [...parentScope, id],
+        () => db.insertHint(hint),
+        affectedPaths(parentScope[0])
+      );
       return id;
     },
-    [commit]
+    [affectedPaths, ancestry, apply, write]
   );
+
   const editHint = useCallback<AdminStore["editHint"]>(
-    (hintId, patch) => commit(updateHint(contentRef.current, hintId, patch)),
-    [commit]
+    (hintId, patch) => {
+      const scope = ancestry(hintId);
+      apply(updateHint(contentRef.current, hintId, patch));
+      write(scope, () => db.updateHint(hintId, patch), affectedPaths(scope[0]));
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const removeHint = useCallback<AdminStore["removeHint"]>(
-    (hintId) => commit(deleteHint(contentRef.current, hintId)),
-    [commit]
+    (hintId) => {
+      const scope = ancestry(hintId);
+      const stepId = scope[3];
+      const paths = affectedPaths(scope[0]);
+      const next = deleteHint(contentRef.current, hintId);
+      const step = next.questions
+        .flatMap((q) => q.parts)
+        .flatMap((p) => p.steps)
+        .find((s) => s.id === stepId);
+      const remaining = step ? step.hints.map((h) => h.id) : [];
+      apply(next);
+      queueRef.current!.prune(scope);
+      write(
+        scope,
+        async () => {
+          await db.deleteRow("hints", hintId);
+          if (remaining.length) await db.reorder("reorder_hints", stepId, remaining);
+        },
+        paths
+      );
+    },
+    [affectedPaths, ancestry, apply, write]
   );
+
   const moveHints = useCallback<AdminStore["moveHints"]>(
-    (stepId, orderedIds) => commit(reorderHints(contentRef.current, stepId, orderedIds)),
-    [commit]
+    (stepId, orderedIds) => {
+      const scope = ancestry(stepId);
+      apply(reorderHints(contentRef.current, stepId, orderedIds));
+      write(
+        [...scope, ...orderedIds],
+        () => db.reorder("reorder_hints", stepId, orderedIds),
+        affectedPaths(scope[0])
+      );
+    },
+    [affectedPaths, ancestry, apply, write]
   );
 
   return (
     <AdminStoreContext.Provider
       value={{
         content,
+        isLoading,
+        error,
         addTest,
         editTest,
         removeTest,

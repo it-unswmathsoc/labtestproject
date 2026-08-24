@@ -150,5 +150,9 @@ describe("AdminStoreProvider", () => {
 
     // Optimistic add is rolled back by the refetch.
     await waitFor(() => expect(screen.getByText("count:2")).toBeInTheDocument());
+    // ...and the reason survives it, rather than being cleared by load().
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("write failed")
+    );
   });
 });

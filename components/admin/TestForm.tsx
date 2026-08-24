@@ -34,6 +34,10 @@ export function TestForm({
   const set = <K extends keyof TestFormValues>(key: K, value: TestFormValues[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
 
+  // Derived, not stored: courses arrive after the first render, so a courseId
+  // captured in the initial state would stay "" and be rejected as a uuid.
+  const courseId = values.courseId || courses[0]?.id || "";
+
   const inputClass =
     "mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900";
 
@@ -42,14 +46,14 @@ export function TestForm({
       className="max-w-lg space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit(values);
+        onSubmit({ ...values, courseId });
       }}
     >
       <label className="block text-sm font-medium text-gray-700">
         Course
         <select
           className={inputClass}
-          value={values.courseId}
+          value={courseId}
           onChange={(e) => set("courseId", e.target.value)}
         >
           {courses.map((c) => (
@@ -66,7 +70,7 @@ export function TestForm({
         required
         value={values.name}
         onChange={(v) => set("name", v)}
-        placeholder="Vectors in $\\mathbb{R}^n$"
+        placeholder={"Vectors in $\\mathbb{R}^n$"}
       />
 
       <LatexField
@@ -81,7 +85,7 @@ export function TestForm({
         label="Description"
         value={values.description}
         onChange={(v) => set("description", v)}
-        placeholder="Covers $\\vec{u} \\cdot \\vec{v}$ and projections."
+        placeholder={"Covers $\\vec{u} \\cdot \\vec{v}$ and projections."}
       />
 
       <label className="flex items-center gap-2 text-sm font-medium text-gray-700">

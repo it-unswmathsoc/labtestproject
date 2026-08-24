@@ -6,6 +6,9 @@
  * concurrently, the child can reach Postgres first and fail with 23503
  * foreign_key_violation. Everything therefore goes through one FIFO chain.
  */
+/** A write the queue dropped on purpose. Callers must not report these as errors. */
+export class CancelledMutation extends Error {}
+
 export interface Enqueued {
   /** Ancestry, root-first: [testId, questionId, partId, stepId, hintId]. */
   scope: string[];
@@ -25,7 +28,7 @@ export class MutationQueue {
     const target = scope[scope.length - 1];
     this.pending = this.pending.filter((entry) => {
       if (!entry.scope.includes(target)) return true;
-      entry.reject(new Error("cancelled: an ancestor was deleted"));
+      entry.reject(new CancelledMutation("an ancestor was deleted"));
       return false;
     });
   }
@@ -77,7 +80,9 @@ export class MutationQueue {
     const cancelled = this.pending;
     this.pending = [];
     for (const entry of cancelled) {
-      entry.reject(new Error(`cancelled: an earlier write failed (${String(error)})`));
+      // The write that actually failed already surfaced its own error; these are
+      // collateral, so they stay quiet rather than raising N more.
+      entry.reject(new CancelledMutation(`an earlier write failed (${String(error)})`));
     }
   }
 }

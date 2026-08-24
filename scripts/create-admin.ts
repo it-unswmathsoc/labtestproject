@@ -24,10 +24,17 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
+const PER_PAGE = 200;
+
+/** listUsers is paginated; a single call only sees the first page. */
 async function findUserByEmail(target: string) {
-  const { data, error } = await supabase.auth.admin.listUsers();
-  if (error) throw error;
-  return data.users.find((u) => u.email === target);
+  for (let page = 1; ; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: PER_PAGE });
+    if (error) throw error;
+    const found = data.users.find((u) => u.email === target);
+    if (found) return found;
+    if (data.users.length < PER_PAGE) return undefined;
+  }
 }
 
 const created = await supabase.auth.admin.createUser({

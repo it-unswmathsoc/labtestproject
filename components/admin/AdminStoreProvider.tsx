@@ -34,7 +34,7 @@ import {
 import type { LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import * as db from "@/lib/supabase/admin-mutations";
-import { MutationQueue } from "@/lib/supabase/mutation-queue";
+import { CancelledMutation, MutationQueue } from "@/lib/supabase/mutation-queue";
 import { revalidatePaths } from "@/lib/supabase/revalidate";
 
 const EMPTY: Content = { courses: [], labTests: [], questions: [] };
@@ -167,8 +167,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         .then(() => queue.whenIdle())
         .then(() => revalidatePaths(paths))
         .catch((cause: unknown) => {
-          setError(cause instanceof Error ? cause.message : String(cause));
-          void load();
+          if (cause instanceof CancelledMutation) return;
+          const message = cause instanceof Error ? cause.message : String(cause);
+          // Refetch first: load() clears `error` on success, so report afterwards.
+          void load().then(() => setError(message));
         });
     },
     [load]
@@ -470,6 +472,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         moveHints,
       }}
     >
+      {error ? (
+        <p role="alert" className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
       {children}
     </AdminStoreContext.Provider>
   );

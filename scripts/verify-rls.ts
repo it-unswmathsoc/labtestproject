@@ -113,10 +113,12 @@ async function checkAdminCrud(admin: SupabaseClient) {
   });
   check("admin can reorder", reorder.error === null, reorder.error?.message ?? "");
 
+  // Scoped to the two rows this script created: the draft test may hold authored
+  // content, and asserting on the whole test would fail against a used database.
   const reordered = await admin
     .from("questions")
     .select("id, sort_order, number")
-    .eq("lab_test_id", DRAFT_TEST)
+    .in("id", [questionId, second])
     .order("sort_order");
   const first = reordered.data?.[0];
   check(

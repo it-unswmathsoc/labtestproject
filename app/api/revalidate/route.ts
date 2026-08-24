@@ -21,7 +21,12 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { paths } = (await request.json()) as { paths?: unknown };
+  let paths: unknown;
+  try {
+    ({ paths } = (await request.json()) as { paths?: unknown });
+  } catch {
+    return NextResponse.json({ error: "body must be JSON" }, { status: 400 });
+  }
   if (!Array.isArray(paths) || paths.some((p) => typeof p !== "string")) {
     return NextResponse.json({ error: "paths must be string[]" }, { status: 400 });
   }

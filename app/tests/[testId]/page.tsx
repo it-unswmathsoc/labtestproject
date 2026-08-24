@@ -34,9 +34,9 @@ export default async function TestStartPage({
         }
       />
       {test.description ? (
-        <p className="mb-8 max-w-2xl text-gray-700">
+        <div className="mb-8 max-w-2xl text-gray-700">
           <RichText>{test.description}</RichText>
-        </p>
+        </div>
       ) : null}
       {count > 0 ? (
         <Link

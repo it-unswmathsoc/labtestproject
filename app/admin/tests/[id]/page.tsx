@@ -14,8 +14,10 @@ export default function EditTestPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { content, editTest } = useAdminStore();
+  const { content, isLoading, editTest } = useAdminStore();
   const test = content.labTests.find((t) => t.id === id);
+  // The store loads asynchronously; without this a refresh 404s before it arrives.
+  if (isLoading) return <p className="text-gray-500">Loading…</p>;
   if (!test) notFound();
 
   const questionCount = content.questions.filter(

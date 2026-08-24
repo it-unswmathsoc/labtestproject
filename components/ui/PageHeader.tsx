@@ -8,7 +8,9 @@ export function PageHeader({
   return (
     <div className="mb-6">
       <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-      {subtitle ? <p className="mt-1 text-gray-500">{subtitle}</p> : null}
+      {/* div, not p: rendered display math is a block element and would be
+          reparented out of a <p>, breaking hydration. */}
+      {subtitle ? <div className="mt-1 text-gray-500">{subtitle}</div> : null}
     </div>
   );
 }

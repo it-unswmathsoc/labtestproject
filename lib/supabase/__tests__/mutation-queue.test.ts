@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MutationQueue } from "../mutation-queue";
+import { CancelledMutation, MutationQueue } from "../mutation-queue";
 
 const deferred = () => {
   let resolve!: () => void;
@@ -118,5 +118,28 @@ describe("MutationQueue", () => {
     await write;
     await queue.whenIdle();
     expect(idle).toBe(true);
+  });
+
+  it("rejects pruned work as a cancellation, not a failure", async () => {
+    const queue = new MutationQueue();
+    let release: () => void = () => {};
+    queue.enqueue(["t"], () => new Promise<void>((r) => (release = r)));
+
+    const child = queue.enqueue(["t", "q", "p"], async () => {});
+    queue.prune(["t", "q"]);
+    release();
+
+    await expect(child).rejects.toBeInstanceOf(CancelledMutation);
+  });
+
+  it("cancels the tail after a failure rather than reporting each as an error", async () => {
+    const queue = new MutationQueue();
+    const failed = queue.enqueue(["a"], async () => {
+      throw new Error("boom");
+    });
+    const behind = queue.enqueue(["b"], async () => {});
+
+    await expect(failed).rejects.toThrow("boom");
+    await expect(behind).rejects.toBeInstanceOf(CancelledMutation);
   });
 });

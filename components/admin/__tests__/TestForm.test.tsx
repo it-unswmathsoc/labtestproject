@@ -40,6 +40,30 @@ describe("TestForm", () => {
     );
   });
 
+  it("submits a real courseId even when courses arrive after first render", async () => {
+    const onSubmit = vi.fn();
+    const { rerender } = render(
+      <TestForm courses={[]} submitLabel="Create" onSubmit={onSubmit} />
+    );
+    // Courses load a tick later, exactly like AdminStoreProvider's fetch.
+    rerender(<TestForm courses={courses} submitLabel="Create" onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByLabelText("Name"), "Week 1");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ courseId: "c1" })
+    );
+  });
+
+  it("shows placeholders with single backslashes, not JSX-literal doubles", () => {
+    render(<TestForm courses={courses} submitLabel="Create" onSubmit={() => {}} />);
+    expect(screen.getByLabelText("Name")).toHaveAttribute(
+      "placeholder",
+      "Vectors in $\\mathbb{R}^n$"
+    );
+  });
+
   it("still requires a name", async () => {
     render(<TestForm courses={courses} submitLabel="Create" onSubmit={() => {}} />);
     expect(screen.getByLabelText("Name")).toBeRequired();

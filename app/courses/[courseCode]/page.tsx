@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getCourseByCode, getLabTestsForCourse } from "@/lib/data/queries";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { RichText } from "@/components/math/RichText";
 
 export const revalidate = 3600;
 
@@ -27,10 +28,10 @@ export default async function CoursePage({
             <Card
               key={test.id}
               href={`/tests/${test.id}`}
-              title={test.name}
-              subtitle={test.term}
+              title={<RichText>{test.name}</RichText>}
+              subtitle={test.term ? <RichText>{test.term}</RichText> : undefined}
             >
-              {test.description}
+              {test.description ? <RichText>{test.description}</RichText> : null}
             </Card>
           ))}
         </div>

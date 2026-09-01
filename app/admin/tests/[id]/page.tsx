@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { useAdminStore } from "@/components/admin/AdminStoreProvider";
 import { TestForm } from "@/components/admin/TestForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { RichText } from "@/components/math/RichText";
 import { QuestionsEditor } from "@/components/admin/QuestionsEditor";
 
 export default function EditTestPage({
@@ -13,8 +14,10 @@ export default function EditTestPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { content, editTest } = useAdminStore();
+  const { content, isLoading, editTest } = useAdminStore();
   const test = content.labTests.find((t) => t.id === id);
+  // The store loads asynchronously; without this a refresh 404s before it arrives.
+  if (isLoading) return <p className="text-gray-500">Loading…</p>;
   if (!test) notFound();
 
   const questionCount = content.questions.filter(
@@ -24,7 +27,7 @@ export default function EditTestPage({
   return (
     <div>
       <PageHeader
-        title={`Edit: ${test.name}`}
+        title={<>Edit: <RichText>{test.name}</RichText></>}
         subtitle={`${questionCount} question${questionCount === 1 ? "" : "s"}`}
       />
       <TestForm

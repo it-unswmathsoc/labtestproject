@@ -14,10 +14,12 @@ describe("seedContent", () => {
 });
 
 describe("newId", () => {
-  it("produces unique prefixed ids", () => {
-    const x = newId("test");
-    const y = newId("test");
-    expect(x.startsWith("test-")).toBe(true);
+  it("produces unique UUIDs", () => {
+    const x = newId();
+    const y = newId();
+    expect(x).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
     expect(x).not.toBe(y);
   });
 });

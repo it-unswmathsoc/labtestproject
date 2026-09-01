@@ -1,63 +1,101 @@
 import type { Course, LabTest, Question } from "./types";
-import { courses, labTests, questions } from "./fixtures";
+import { publicClient } from "@/lib/supabase/public";
+import {
+  toCourse,
+  toLabTest,
+  toQuestion,
+  QUESTION_TREE_SELECT,
+} from "@/lib/supabase/mappers";
 
-const bySortOrder = <T extends { sortOrder: number }>(a: T, b: T) =>
-  a.sortOrder - b.sortOrder;
+// Ids reach these helpers straight from the URL. PostgREST rejects a non-uuid
+// filter value with 22P02, which would surface as a 500 error page; for a URL
+// segment it just means "no such row", so screen it out first.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function getCourses(): Promise<Course[]> {
-  return [...courses].sort(bySortOrder);
+  const { data, error } = await publicClient
+    .from("courses")
+    .select("*")
+    .order("sort_order");
+  if (error) throw error;
+  return data.map(toCourse);
 }
 
 export async function getCourseByCode(code: string): Promise<Course | null> {
-  const target = code.toLowerCase();
-  return courses.find((c) => c.code.toLowerCase() === target) ?? null;
+  // Escape LIKE wildcards: the code comes straight from the URL, and a bare
+  // ilike would let /courses/% match an arbitrary course.
+  const { data, error } = await publicClient
+    .from("courses")
+    .select("*")
+    .ilike("code", code.replace(/[%_\\]/g, "\\$&"))
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toCourse(data) : null;
 }
 
 export async function getCourseById(courseId: string): Promise<Course | null> {
-  return courses.find((c) => c.id === courseId) ?? null;
+  if (!UUID.test(courseId)) return null;
+
+  const { data, error } = await publicClient
+    .from("courses")
+    .select("*")
+    .eq("id", courseId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toCourse(data) : null;
 }
 
 export async function getLabTestsForCourse(courseId: string): Promise<LabTest[]> {
-  return labTests
-    .filter((t) => t.courseId === courseId && t.isPublished)
-    .sort(bySortOrder);
+  const { data, error } = await publicClient
+    .from("lab_tests")
+    .select("*")
+    .eq("course_id", courseId)
+    .eq("is_published", true)
+    .order("sort_order");
+  if (error) throw error;
+  return data.map(toLabTest);
 }
 
 export async function getLabTest(testId: string): Promise<LabTest | null> {
-  return labTests.find((t) => t.id === testId && t.isPublished) ?? null;
+  if (!UUID.test(testId)) return null;
+
+  const { data, error } = await publicClient
+    .from("lab_tests")
+    .select("*")
+    .eq("id", testId)
+    .eq("is_published", true)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? toLabTest(data) : null;
 }
 
 export async function getQuestionsForTest(testId: string): Promise<Question[]> {
   const test = await getLabTest(testId);
   if (!test) return [];
-  return questions
-    .filter((q) => q.labTestId === testId)
-    .sort(bySortOrder)
-    .map((q) => ({
-      ...q,
-      parts: [...q.parts].sort(bySortOrder).map((p) => ({
-        ...p,
-        steps: [...p.steps].sort(bySortOrder).map((s) => ({
-          ...s,
-          hints: [...s.hints].sort(bySortOrder),
-        })),
-      })),
-    }));
+
+  const { data, error } = await publicClient
+    .from("questions")
+    .select(QUESTION_TREE_SELECT)
+    .eq("lab_test_id", testId)
+    .order("sort_order");
+  if (error) throw error;
+  return data.map(toQuestion);
 }
 
 export async function getQuestion(questionId: string): Promise<Question | null> {
-  const question = questions.find((q) => q.id === questionId);
-  if (!question) return null;
-  const test = await getLabTest(question.labTestId);
+  if (!UUID.test(questionId)) return null;
+
+  const { data, error } = await publicClient
+    .from("questions")
+    .select(QUESTION_TREE_SELECT)
+    .eq("id", questionId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  // RLS already hides questions under an unpublished test; confirm explicitly too.
+  const test = await getLabTest(data.lab_test_id);
   if (!test) return null;
-  return {
-    ...question,
-    parts: [...question.parts].sort(bySortOrder).map((p) => ({
-      ...p,
-      steps: [...p.steps].sort(bySortOrder).map((s) => ({
-        ...s,
-        hints: [...s.hints].sort(bySortOrder),
-      })),
-    })),
-  };
+
+  return toQuestion(data);
 }

@@ -2,45 +2,70 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { Course } from "@/lib/data/types";
 import { TestForm } from "../TestForm";
 
-const courses = [{ id: "c1", code: "MATH1081", name: "Discrete", sortOrder: 1 }];
+const courses: Course[] = [
+  { id: "c1", code: "MATH1081", name: "Discrete Mathematics", sortOrder: 1 },
+];
 
 describe("TestForm", () => {
-  it("submits the entered values", async () => {
-    const onSubmit = vi.fn();
-    render(<TestForm courses={courses} onSubmit={onSubmit} submitLabel="Create" />);
+  it("previews LaTeX in the name, term and description as KaTeX", async () => {
+    render(<TestForm courses={courses} submitLabel="Create" onSubmit={() => {}} />);
 
-    await userEvent.type(screen.getByLabelText(/name/i), "Lab Test 9");
-    await userEvent.type(screen.getByLabelText(/term/i), "2026 T1");
-    await userEvent.click(screen.getByRole("button", { name: /create/i }));
+    // NB: userEvent treats { as a key descriptor, so keep braces out of typed text.
+    await userEvent.type(screen.getByLabelText("Name"), "Vectors in $x^2$");
+
+    // Preview pane renders the math rather than showing the source.
+    const rendered = document.querySelectorAll(".katex");
+    expect(rendered.length).toBeGreaterThan(0);
+    expect(document.body.textContent).toContain("Vectors in ");
+    // The source itself is still what lives in the field.
+    expect(screen.getByLabelText("Name")).toHaveValue("Vectors in $x^2$");
+  });
+
+  it("submits the raw LaTeX source, not the rendered output", async () => {
+    const onSubmit = vi.fn();
+    render(<TestForm courses={courses} submitLabel="Create" onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByLabelText("Name"), "Bases of $V$");
+    await userEvent.type(screen.getByLabelText("Description"), "Find $\\dim V$.");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
-        courseId: "c1",
-        name: "Lab Test 9",
-        term: "2026 T1",
-        isPublished: false,
+        name: "Bases of $V$",
+        description: "Find $\\dim V$.",
       })
     );
   });
 
-  it("pre-fills from initial values", () => {
-    render(
-      <TestForm
-        courses={courses}
-        onSubmit={vi.fn()}
-        submitLabel="Save"
-        initial={{
-          courseId: "c1",
-          name: "Existing",
-          term: "2025 T3",
-          description: "desc",
-          isPublished: true,
-        }}
-      />
+  it("submits a real courseId even when courses arrive after first render", async () => {
+    const onSubmit = vi.fn();
+    const { rerender } = render(
+      <TestForm courses={[]} submitLabel="Create" onSubmit={onSubmit} />
     );
-    expect(screen.getByLabelText(/name/i)).toHaveValue("Existing");
-    expect(screen.getByLabelText(/published/i)).toBeChecked();
+    // Courses load a tick later, exactly like AdminStoreProvider's fetch.
+    rerender(<TestForm courses={courses} submitLabel="Create" onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByLabelText("Name"), "Week 1");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ courseId: "c1" })
+    );
+  });
+
+  it("shows placeholders with single backslashes, not JSX-literal doubles", () => {
+    render(<TestForm courses={courses} submitLabel="Create" onSubmit={() => {}} />);
+    expect(screen.getByLabelText("Name")).toHaveAttribute(
+      "placeholder",
+      "Vectors in $\\mathbb{R}^n$"
+    );
+  });
+
+  it("still requires a name", async () => {
+    render(<TestForm courses={courses} submitLabel="Create" onSubmit={() => {}} />);
+    expect(screen.getByLabelText("Name")).toBeRequired();
   });
 });

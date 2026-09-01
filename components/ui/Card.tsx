@@ -7,14 +7,15 @@ export function Card({
   children,
 }: {
   href?: string;
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const inner = (
     <div className="h-full rounded-xl border border-gray-200 p-5 transition hover:border-gray-400 hover:shadow-sm">
       <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-      {subtitle ? <p className="mt-1 text-sm text-gray-500">{subtitle}</p> : null}
+      {/* div, not p: see PageHeader — display math renders as a block. */}
+      {subtitle ? <div className="mt-1 text-sm text-gray-500">{subtitle}</div> : null}
       {children ? <div className="mt-3 text-sm text-gray-700">{children}</div> : null}
     </div>
   );

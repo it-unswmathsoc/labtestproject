@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import type { LabTest, Question } from "@/lib/data/types";
 import { QuestionPlayer } from "./QuestionPlayer";
+import { RichText } from "@/components/math/RichText";
 
 export function PracticeRunner({
   test,
@@ -25,7 +26,7 @@ export function PracticeRunner({
       <div className="rounded-xl border border-gray-200 p-8 text-center">
         <div className="text-4xl">🎉</div>
         <h1 className="mt-3 text-2xl font-bold text-gray-900">
-          You&apos;ve reached the end of {test.name}
+          You&apos;ve reached the end of <RichText>{test.name}</RichText>
         </h1>
         <p className="mt-1 text-gray-500">Nice work — practice makes perfect.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -56,7 +57,9 @@ export function PracticeRunner({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">{test.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          <RichText>{test.name}</RichText>
+        </h1>
         <span className="shrink-0 text-sm text-gray-500">
           Question {index + 1} of {questions.length}
         </span>

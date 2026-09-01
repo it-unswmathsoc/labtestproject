@@ -9,12 +9,14 @@ export function LatexField({
   onChange,
   rows = 3,
   placeholder,
+  required,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   rows?: number;
   placeholder?: string;
+  required?: boolean;
 }) {
   const id = useId();
   return (
@@ -26,6 +28,7 @@ export function LatexField({
         id={id}
         className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm text-gray-900"
         rows={rows}
+        required={required}
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}

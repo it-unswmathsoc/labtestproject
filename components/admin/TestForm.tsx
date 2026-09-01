@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Course } from "@/lib/data/types";
+import { LatexField } from "./LatexField";
 
 export interface TestFormValues {
   courseId: string;
@@ -33,6 +34,10 @@ export function TestForm({
   const set = <K extends keyof TestFormValues>(key: K, value: TestFormValues[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
 
+  // Derived, not stored: courses arrive after the first render, so a courseId
+  // captured in the initial state would stay "" and be rejected as a uuid.
+  const courseId = values.courseId || courses[0]?.id || "";
+
   const inputClass =
     "mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900";
 
@@ -41,14 +46,14 @@ export function TestForm({
       className="max-w-lg space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit(values);
+        onSubmit({ ...values, courseId });
       }}
     >
       <label className="block text-sm font-medium text-gray-700">
         Course
         <select
           className={inputClass}
-          value={values.courseId}
+          value={courseId}
           onChange={(e) => set("courseId", e.target.value)}
         >
           {courses.map((c) => (
@@ -59,34 +64,29 @@ export function TestForm({
         </select>
       </label>
 
-      <label className="block text-sm font-medium text-gray-700">
-        Name
-        <input
-          className={inputClass}
-          value={values.name}
-          onChange={(e) => set("name", e.target.value)}
-          required
-        />
-      </label>
+      <LatexField
+        label="Name"
+        rows={2}
+        required
+        value={values.name}
+        onChange={(v) => set("name", v)}
+        placeholder={"Vectors in $\\mathbb{R}^n$"}
+      />
 
-      <label className="block text-sm font-medium text-gray-700">
-        Term
-        <input
-          className={inputClass}
-          value={values.term}
-          onChange={(e) => set("term", e.target.value)}
-        />
-      </label>
+      <LatexField
+        label="Term"
+        rows={2}
+        value={values.term}
+        onChange={(v) => set("term", v)}
+        placeholder="2026 T1"
+      />
 
-      <label className="block text-sm font-medium text-gray-700">
-        Description
-        <textarea
-          className={inputClass}
-          rows={3}
-          value={values.description}
-          onChange={(e) => set("description", e.target.value)}
-        />
-      </label>
+      <LatexField
+        label="Description"
+        value={values.description}
+        onChange={(v) => set("description", v)}
+        placeholder={"Covers $\\vec{u} \\cdot \\vec{v}$ and projections."}
+      />
 
       <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <input

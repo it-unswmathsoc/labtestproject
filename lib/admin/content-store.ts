@@ -7,12 +7,16 @@ export function seedContent(): Content {
   return structuredClone({ courses, labTests, questions });
 }
 
-export function newId(prefix: string): string {
-  const rand =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-  return `${prefix}-${rand}`;
+/** Ids go straight into `uuid` columns, so they must be valid UUIDs. */
+export function newId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  // Non-secure browser contexts only; Node and jsdom both provide randomUUID.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
 }
 
 export function createTest(
@@ -25,7 +29,7 @@ export function createTest(
     isPublished: boolean;
   }
 ): { content: Content; id: string } {
-  const id = newId("test");
+  const id = newId();
   const siblings = content.labTests.filter((t) => t.courseId === input.courseId);
   const sortOrder = siblings.length
     ? Math.max(...siblings.map((t) => t.sortOrder)) + 1
@@ -74,7 +78,7 @@ export function createQuestion(
   testId: string,
   input: { promptLatex: string; noteLatex?: string }
 ): { content: Content; id: string } {
-  const id = newId("q");
+  const id = newId();
   const siblings = content.questions.filter((q) => q.labTestId === testId);
   const nextNum = siblings.length
     ? Math.max(...siblings.map((q) => q.number)) + 1
@@ -141,7 +145,7 @@ export function createPart(
     answerConfig?: AnswerConfig;
   }
 ): { content: Content; id: string } {
-  const id = newId("part");
+  const id = newId();
   return {
     content: {
       ...content,
@@ -214,7 +218,7 @@ export function createStep(
     explanationLatex: string;
   }
 ): { content: Content; id: string } {
-  const id = newId("step");
+  const id = newId();
   return {
     content: {
       ...content,
@@ -312,7 +316,7 @@ export function createHint(
   stepId: string,
   input: { bodyLatex: string }
 ): { content: Content; id: string } {
-  const id = newId("hint");
+  const id = newId();
   const next = mapSteps(content, (steps) =>
     steps.map((s) => {
       if (s.id !== stepId) return s;

@@ -56,7 +56,8 @@ interface AdminStore {
     description?: string;
     isPublished: boolean;
   }) => string;
-  editTest: (id: string, patch: Partial<Omit<LabTest, "id">>) => void;
+  /** Resolves true once the write lands, so the form can confirm the save. */
+  editTest: (id: string, patch: Partial<Omit<LabTest, "id">>) => Promise<boolean>;
   removeTest: (id: string) => void;
   moveTests: (courseId: string, orderedIds: string[]) => void;
   addQuestion: (testId: string, input: { promptLatex: string; noteLatex?: string }) => string;
@@ -179,18 +180,30 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     return paths;
   }, []);
 
+  /**
+   * Resolves true once the row is actually in Postgres, so a caller can confirm
+   * the save rather than guess from the optimistic update. Failures resolve
+   * false instead of rejecting: they are already reported through `error`, and
+   * rejecting would strand every caller that fires and forgets.
+   */
   const write = useCallback(
-    (scope: string[], run: () => Promise<unknown>, paths: string[]) => {
+    (
+      scope: string[],
+      run: () => Promise<unknown>,
+      paths: string[]
+    ): Promise<boolean> => {
       const queue = queueRef.current!;
-      queue
+      return queue
         .enqueue(scope, run)
         .then(() => queue.whenIdle())
         .then(() => revalidatePaths(paths))
+        .then(() => true)
         .catch((cause: unknown) => {
-          if (cause instanceof CancelledMutation) return;
+          if (cause instanceof CancelledMutation) return false;
           const message = cause instanceof Error ? cause.message : String(cause);
           // Refetch first: load() clears `error` on success, so report afterwards.
           void load().then(() => setError(message));
+          return false;
         });
     },
     [load]
@@ -255,7 +268,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       const before = affectedPaths(id);
       apply(updateTest(contentRef.current, id, patch));
       const paths = [...new Set([...before, ...affectedPaths(id)])];
-      write([id], () => db.updateLabTest(id, patch), paths);
+      return write([id], () => db.updateLabTest(id, patch), paths);
     },
     [affectedPaths, apply, write]
   );

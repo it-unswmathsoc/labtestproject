@@ -37,7 +37,7 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => setDialog({ mode: "new" })}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
           >
             + New course
           </button>

@@ -1,5 +1,5 @@
 import type { Content } from "./types";
-import type { LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
+import type { Course, LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import { courses, labTests, questions } from "@/lib/data/fixtures";
 
@@ -17,6 +17,41 @@ export function newId(): string {
     const r = (Math.random() * 16) | 0;
     return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
   });
+}
+
+export function createCourse(
+  content: Content,
+  input: { code: string; name: string; description?: string }
+): { content: Content; id: string } {
+  const id = newId();
+  const sortOrder = content.courses.length
+    ? Math.max(...content.courses.map((c) => c.sortOrder)) + 1
+    : 1;
+  const course: Course = { id, sortOrder, ...input };
+  return { content: { ...content, courses: [...content.courses, course] }, id };
+}
+
+export function updateCourse(
+  content: Content,
+  id: string,
+  patch: Partial<Omit<Course, "id">>
+): Content {
+  return {
+    ...content,
+    courses: content.courses.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+  };
+}
+
+/** The database cascades course -> lab_tests -> questions; mirror that locally. */
+export function deleteCourse(content: Content, id: string): Content {
+  const orphanedTestIds = new Set(
+    content.labTests.filter((t) => t.courseId === id).map((t) => t.id)
+  );
+  return {
+    courses: content.courses.filter((c) => c.id !== id),
+    labTests: content.labTests.filter((t) => t.courseId !== id),
+    questions: content.questions.filter((q) => !orphanedTestIds.has(q.labTestId)),
+  };
 }
 
 export function createTest(

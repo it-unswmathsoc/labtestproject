@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAdminStore } from "@/components/admin/AdminStoreProvider";
 import { CourseForm } from "@/components/admin/CourseForm";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { SortableList } from "@/components/admin/SortableList";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,6 +12,9 @@ import { RichText } from "@/components/math/RichText";
 
 /** Which course the modal is for: a new one, or an existing one being edited. */
 type CourseDialog = { mode: "new" } | { mode: "edit"; courseId: string };
+
+/** The single row awaiting a delete confirmation, if any. */
+type Pending = { kind: "course" | "test"; id: string };
 
 export default function AdminDashboard() {
   const {
@@ -22,12 +26,25 @@ export default function AdminDashboard() {
     moveTests,
   } = useAdminStore();
   const [dialog, setDialog] = useState<CourseDialog | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
 
   const { courses } = content;
   const editing =
     dialog?.mode === "edit"
       ? courses.find((c) => c.id === dialog.courseId)
       : undefined;
+
+  const doomedCourse =
+    pending?.kind === "course"
+      ? courses.find((c) => c.id === pending.id)
+      : undefined;
+  const doomedTest =
+    pending?.kind === "test"
+      ? content.labTests.find((t) => t.id === pending.id)
+      : undefined;
+  const doomedCourseTestCount = doomedCourse
+    ? content.labTests.filter((t) => t.courseId === doomedCourse.id).length
+    : 0;
 
   return (
     <div>
@@ -76,15 +93,7 @@ export default function AdminDashboard() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Delete "${course.code}"? Its ${tests.length} lab test(s) and all their questions will be deleted too.`
-                          )
-                        ) {
-                          removeCourse(course.id);
-                        }
-                      }}
+                      onClick={() => setPending({ kind: "course", id: course.id })}
                       className="text-red-600 hover:underline"
                     >
                       Delete
@@ -130,15 +139,7 @@ export default function AdminDashboard() {
                             </Link>
                             <button
                               type="button"
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Delete "${test.name}" and its questions?`
-                                  )
-                                ) {
-                                  removeTest(test.id);
-                                }
-                              }}
+                              onClick={() => setPending({ kind: "test", id: test.id })}
                               className="text-red-600 hover:underline"
                             >
                               Delete
@@ -154,6 +155,49 @@ export default function AdminDashboard() {
           })}
         </div>
       )}
+
+      {doomedCourse ? (
+        <ConfirmDialog
+          title={
+            doomedCourseTestCount === 0
+              ? "Delete course"
+              : "Delete course and its lab tests"
+          }
+          message={
+            <>
+              Delete <strong>{doomedCourse.code}</strong>
+              {doomedCourseTestCount === 0
+                ? "?"
+                : ` and its ${doomedCourseTestCount} lab test${
+                    doomedCourseTestCount === 1 ? "" : "s"
+                  }?`}{" "}
+              This cannot be undone.
+            </>
+          }
+          onConfirm={() => {
+            removeCourse(doomedCourse.id);
+            setPending(null);
+          }}
+          onCancel={() => setPending(null)}
+        />
+      ) : null}
+
+      {doomedTest ? (
+        <ConfirmDialog
+          title="Delete lab test"
+          message={
+            <>
+              Delete <RichText>{doomedTest.name}</RichText> and its questions?
+              This cannot be undone.
+            </>
+          }
+          onConfirm={() => {
+            removeTest(doomedTest.id);
+            setPending(null);
+          }}
+          onCancel={() => setPending(null)}
+        />
+      ) : null}
 
       {dialog ? (
         <Modal

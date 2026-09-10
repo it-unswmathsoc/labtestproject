@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLabTest, getQuestionsForTest } from "@/lib/data/queries";
+import {
+  getLabTest,
+  getQuestionsForTest,
+  getCourseById,
+} from "@/lib/data/queries";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { BackLink } from "@/components/ui/BackLink";
 import { RichText } from "@/components/math/RichText";
 
 export const revalidate = 3600;
@@ -16,11 +21,17 @@ export default async function TestStartPage({
   if (!test) notFound();
 
   const questions = await getQuestionsForTest(testId);
+  const course = await getCourseById(test.courseId);
   const count = questions.length;
   const countLabel = `${count} question${count === 1 ? "" : "s"}`;
 
   return (
     <div>
+      {/* Falls back to the index if the course row is somehow missing, so the
+          link is never a dead end. */}
+      <BackLink href={course ? `/courses/${course.code}` : "/"}>
+        {course ? course.code : "All courses"}
+      </BackLink>
       <PageHeader
         title={<RichText>{test.name}</RichText>}
         subtitle={

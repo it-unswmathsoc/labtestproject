@@ -5,6 +5,7 @@ import {
   getCourseById,
 } from "@/lib/data/queries";
 import { PracticeRunner } from "@/components/player/PracticeRunner";
+import { BackLink } from "@/components/ui/BackLink";
 
 export default async function PracticePage({
   params,
@@ -19,10 +20,13 @@ export default async function PracticePage({
   const course = await getCourseById(test.courseId);
 
   return (
-    <PracticeRunner
-      test={test}
-      questions={questions}
-      courseCode={course?.code ?? ""}
-    />
+    <div>
+      <BackLink href={`/tests/${testId}`}>Exit practice</BackLink>
+      <PracticeRunner
+        test={test}
+        questions={questions}
+        courseCode={course?.code ?? ""}
+      />
+    </div>
   );
 }

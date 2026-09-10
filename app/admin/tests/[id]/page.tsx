@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { useAdminStore } from "@/components/admin/AdminStoreProvider";
 import { TestForm } from "@/components/admin/TestForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { BackLink } from "@/components/ui/BackLink";
 import { RichText } from "@/components/math/RichText";
 import { QuestionsEditor } from "@/components/admin/QuestionsEditor";
 
@@ -26,6 +27,7 @@ export default function EditTestPage({
 
   return (
     <div>
+      <BackLink href="/admin">Lab tests</BackLink>
       <PageHeader
         title={<>Edit: <RichText>{test.name}</RichText></>}
         subtitle={`${questionCount} question${questionCount === 1 ? "" : "s"}`}

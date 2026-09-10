@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAdminStore } from "@/components/admin/AdminStoreProvider";
 import { TestForm } from "@/components/admin/TestForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { BackLink } from "@/components/ui/BackLink";
 
 export default function NewTestPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function NewTestPage() {
 
   return (
     <div>
+      <BackLink href="/admin">Lab tests</BackLink>
       <PageHeader title="New lab test" />
       <TestForm
         courses={content.courses}

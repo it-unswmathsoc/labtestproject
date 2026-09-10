@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getCourseByCode, getLabTestsForCourse } from "@/lib/data/queries";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { BackLink } from "@/components/ui/BackLink";
 import { RichText } from "@/components/math/RichText";
 
 export const revalidate = 3600;
@@ -19,6 +20,7 @@ export default async function CoursePage({
 
   return (
     <div>
+      <BackLink href="/">All courses</BackLink>
       <PageHeader title={`${course.code} — ${course.name}`} subtitle="Lab tests" />
       {tests.length === 0 ? (
         <p className="text-gray-500">No lab tests available yet for this course.</p>

@@ -1,4 +1,4 @@
-import type { LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
+import type { Course, LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { Content } from "@/lib/admin/types";
 import type { Json } from "./database.types";
 import { createClient } from "./client";
@@ -40,6 +40,32 @@ export async function fetchContent(): Promise<Content> {
     questions: (questions.data ?? []).map(toQuestion),
   };
 }
+
+export const insertCourse = (course: Course) =>
+  exec(
+    supabase()
+      .from("courses")
+      .insert({
+        id: course.id,
+        code: course.code,
+        name: course.name,
+        description: course.description ?? null,
+        sort_order: course.sortOrder,
+      })
+  );
+
+export const updateCourse = (id: string, patch: Partial<Course>) =>
+  exec(
+    supabase()
+      .from("courses")
+      .update({
+        ...(patch.code !== undefined && { code: patch.code }),
+        ...(patch.name !== undefined && { name: patch.name }),
+        ...("description" in patch && { description: patch.description ?? null }),
+        ...(patch.sortOrder !== undefined && { sort_order: patch.sortOrder }),
+      })
+      .eq("id", id)
+  );
 
 export const insertLabTest = (test: LabTest) =>
   exec(
@@ -193,7 +219,13 @@ export const updateHint = (id: string, patch: Partial<Hint>) =>
       .eq("id", id)
   );
 
-type Table = "lab_tests" | "questions" | "question_parts" | "steps" | "hints";
+type Table =
+  | "courses"
+  | "lab_tests"
+  | "questions"
+  | "question_parts"
+  | "steps"
+  | "hints";
 
 /** Children go with the row; the database cascades. */
 export const deleteRow = (table: Table, id: string) =>

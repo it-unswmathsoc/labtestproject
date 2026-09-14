@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Course } from "@/lib/data/types";
 import { LatexField } from "./LatexField";
 
@@ -19,10 +19,15 @@ export function TestForm({
   initial,
 }: {
   courses: Course[];
-  onSubmit: (values: TestFormValues) => void;
+  /**
+   * Return the store's write promise to get a "Saving…"/"Saved" indicator.
+   * Returning nothing leaves the button silent, for callers that navigate away.
+   */
+  onSubmit: (values: TestFormValues) => void | Promise<boolean>;
   submitLabel: string;
   initial?: Partial<TestFormValues>;
 }) {
+  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [values, setValues] = useState<TestFormValues>({
     courseId: initial?.courseId ?? courses[0]?.id ?? "",
     name: initial?.name ?? "",
@@ -31,8 +36,17 @@ export function TestForm({
     isPublished: initial?.isPublished ?? false,
   });
 
-  const set = <K extends keyof TestFormValues>(key: K, value: TestFormValues[K]) =>
+  const set = <K extends keyof TestFormValues>(key: K, value: TestFormValues[K]) => {
+    // A stale "Saved" next to an edited field would describe the wrong state.
+    setStatus("idle");
     setValues((v) => ({ ...v, [key]: value }));
+  };
+
+  useEffect(() => {
+    if (status !== "saved") return;
+    const timer = setTimeout(() => setStatus("idle"), 2000);
+    return () => clearTimeout(timer);
+  }, [status]);
 
   // Derived, not stored: courses arrive after the first render, so a courseId
   // captured in the initial state would stay "" and be rejected as a uuid.
@@ -46,7 +60,12 @@ export function TestForm({
       className="max-w-lg space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ ...values, courseId });
+        const pending = onSubmit({ ...values, courseId });
+        if (!pending) return;
+        setStatus("saving");
+        // A failed write is reported by the store's own error banner, so this
+        // just drops back to idle rather than claiming anything.
+        void pending.then((ok) => setStatus(ok ? "saved" : "idle"));
       }}
     >
       <label className="block text-sm font-medium text-gray-700">
@@ -97,12 +116,20 @@ export function TestForm({
         Published
       </label>
 
-      <button
-        type="submit"
-        className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-      >
-        {submitLabel}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={status === "saving"}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
+        >
+          {status === "saving" ? "Saving…" : submitLabel}
+        </button>
+        {status === "saved" ? (
+          <span role="status" className="text-sm text-green-700">
+            ✓ Saved
+          </span>
+        ) : null}
+      </div>
     </form>
   );
 }

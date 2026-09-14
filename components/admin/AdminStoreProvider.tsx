@@ -10,6 +10,9 @@ import {
 } from "react";
 import type { Content } from "@/lib/admin/types";
 import {
+  createCourse,
+  updateCourse,
+  deleteCourse,
   createTest,
   updateTest,
   deleteTest,
@@ -31,7 +34,7 @@ import {
   deleteHint,
   reorderHints,
 } from "@/lib/admin/content-store";
-import type { LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
+import type { Course, LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import * as db from "@/lib/supabase/admin-mutations";
 import { CancelledMutation, MutationQueue } from "@/lib/supabase/mutation-queue";
@@ -43,6 +46,9 @@ interface AdminStore {
   content: Content;
   isLoading: boolean;
   error: string;
+  addCourse: (input: { code: string; name: string; description?: string }) => string;
+  editCourse: (id: string, patch: Partial<Omit<Course, "id">>) => void;
+  removeCourse: (id: string) => void;
   addTest: (input: {
     courseId: string;
     name: string;
@@ -50,7 +56,8 @@ interface AdminStore {
     description?: string;
     isPublished: boolean;
   }) => string;
-  editTest: (id: string, patch: Partial<Omit<LabTest, "id">>) => void;
+  /** Resolves true once the write lands, so the form can confirm the save. */
+  editTest: (id: string, patch: Partial<Omit<LabTest, "id">>) => Promise<boolean>;
   removeTest: (id: string) => void;
   moveTests: (courseId: string, orderedIds: string[]) => void;
   addQuestion: (testId: string, input: { promptLatex: string; noteLatex?: string }) => string;
@@ -159,24 +166,89 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     return paths;
   }, []);
 
+  /** A course owns a /courses page, plus every /tests page beneath it. */
+  const coursePaths = useCallback((courseId: string): string[] => {
+    const { courses, labTests } = contentRef.current;
+    const paths = ["/"];
+    const course = courses.find((c) => c.id === courseId);
+    if (!course) return paths;
+
+    paths.push(`/courses/${course.code}`);
+    for (const test of labTests) {
+      if (test.courseId === courseId) paths.push(`/tests/${test.id}`);
+    }
+    return paths;
+  }, []);
+
+  /**
+   * Resolves true once the row is actually in Postgres, so a caller can confirm
+   * the save rather than guess from the optimistic update. Failures resolve
+   * false instead of rejecting: they are already reported through `error`, and
+   * rejecting would strand every caller that fires and forgets.
+   */
   const write = useCallback(
-    (scope: string[], run: () => Promise<unknown>, paths: string[]) => {
+    (
+      scope: string[],
+      run: () => Promise<unknown>,
+      paths: string[]
+    ): Promise<boolean> => {
       const queue = queueRef.current!;
-      queue
+      return queue
         .enqueue(scope, run)
         .then(() => queue.whenIdle())
         .then(() => revalidatePaths(paths))
+        .then(() => true)
         .catch((cause: unknown) => {
-          if (cause instanceof CancelledMutation) return;
+          if (cause instanceof CancelledMutation) return false;
           const message = cause instanceof Error ? cause.message : String(cause);
           // Refetch first: load() clears `error` on success, so report afterwards.
           void load().then(() => setError(message));
+          return false;
         });
     },
     [load]
   );
 
   const testIdOf = useCallback((id: string) => ancestry(id)[0], [ancestry]);
+
+  const addCourse = useCallback<AdminStore["addCourse"]>(
+    (input) => {
+      const { content: next, id } = createCourse(contentRef.current, input);
+      apply(next);
+      const course = next.courses.find((c) => c.id === id)!;
+      write([id], () => db.insertCourse(course), coursePaths(id));
+      return id;
+    },
+    [apply, coursePaths, write]
+  );
+
+  const editCourse = useCallback<AdminStore["editCourse"]>(
+    (id, patch) => {
+      // Renaming the code moves the course's public page; the old url goes stale
+      // unless it is busted too.
+      const before = coursePaths(id);
+      apply(updateCourse(contentRef.current, id, patch));
+      const paths = [...new Set([...before, ...coursePaths(id)])];
+      write([id], () => db.updateCourse(id, patch), paths);
+    },
+    [apply, coursePaths, write]
+  );
+
+  const removeCourse = useCallback<AdminStore["removeCourse"]>(
+    (id) => {
+      const paths = coursePaths(id);
+      // Queued scopes are rooted at a lab test, not a course, so the course id
+      // alone would not match them. Prune each doomed test's subtree by hand.
+      const doomedTestIds = contentRef.current.labTests
+        .filter((t) => t.courseId === id)
+        .map((t) => t.id);
+      apply(deleteCourse(contentRef.current, id));
+      for (const testId of doomedTestIds) queueRef.current!.prune([testId]);
+      queueRef.current!.prune([id]);
+      write([id], () => db.deleteRow("courses", id), paths);
+    },
+    [apply, coursePaths, write]
+  );
 
   const addTest = useCallback<AdminStore["addTest"]>(
     (input) => {
@@ -196,7 +268,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       const before = affectedPaths(id);
       apply(updateTest(contentRef.current, id, patch));
       const paths = [...new Set([...before, ...affectedPaths(id)])];
-      write([id], () => db.updateLabTest(id, patch), paths);
+      return write([id], () => db.updateLabTest(id, patch), paths);
     },
     [affectedPaths, apply, write]
   );
@@ -450,6 +522,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         content,
         isLoading,
         error,
+        addCourse,
+        editCourse,
+        removeCourse,
         addTest,
         editTest,
         removeTest,

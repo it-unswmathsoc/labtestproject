@@ -122,22 +122,27 @@ module per case behind a dispatcher, no UI or network dependencies:
 
 | File | Exports |
 |---|---|
-| `types.ts` | `AnswerSyntax` |
-| `numbas.ts` | `normalize()`, `toLatex()`, `parseSet()` |
-| `maple.ts` | `normalize()`, `toLatex()`, `parseSet()` |
-| `latex.ts` | `normalize()`, `toLatex()`, `parseSet()` |
-| `index.ts` | `normalizeBySyntax()`, `toLatexBySyntax()`, `parseSetBySyntax()` |
+| `types.ts` | `AnswerSyntax`, `NormalizeResult` |
+| `numbas.ts` | the five dialect functions below |
+| `maple.ts` | the five dialect functions below |
+| `latex.ts` | the five dialect functions below |
+| `index.ts` | `dialect()` lookup, `SYNTAX_LABELS` |
 
-Every dialect module exports the same three functions, so each is understandable
-and testable on its own and a fourth dialect is one new file plus one switch arm.
+Every dialect module exports the same five functions, so each is understandable
+and testable on its own, and a fourth dialect is one new file plus one map entry:
 
-Each function's contract:
-
-- `normalize(input: string): { value: string; error?: string }` — canonical form
-  for comparison, plus a syntax-error message when the input is malformed for the
-  dialect. Total; never throws.
-- `toLatex(input: string, type: AnswerType): string` — display LaTeX.
+- `normalize(input: string): NormalizeResult` — `{ value, error? }`. Canonical
+  form for comparison, plus a syntax-error message when the input is malformed for
+  the dialect. Total; never throws.
 - `parseSet(input: string): number[] | null` — integers, or `null` if malformed.
+- `formatSet(members: number[]): string` — the dialect's canonical set notation,
+  used for `GradeResult.normalized` and for the "sets look like…" hint.
+- `setToLatex(input: string): string` — display LaTeX for a set answer.
+- `expressionToLatex(input: string): string` — display LaTeX for an expression.
+
+The answer-type switch stays in `answerToLatex`, which calls `setToLatex` or
+`expressionToLatex` on the selected dialect. Dialect modules never see an
+`AnswerType`.
 
 ## Dialect rules
 
@@ -150,11 +155,16 @@ Each function's contract:
 - **Do not lowercase.** Maple is case-sensitive; `Pi` and `pi` are different.
 - Strip all whitespace.
 - Sets: `{a,b,c}`; empty set is `{}`.
-- Implicit multiplication is malformed. A digit immediately followed by a letter,
-  or a letter immediately followed by `(` where the name is not a known function,
-  is rejected with a syntax error rather than silently marked wrong. The known
-  function list covers at least `sqrt`, `abs`, `exp`, `ln`, `log`, `sin`, `cos`,
-  `tan`, `sinh`, `cosh`, `tanh`, `factorial`, `binomial`.
+- Implicit multiplication is malformed, and is rejected with a syntax error rather
+  than silently marked wrong. Only the four **unambiguous** patterns are flagged:
+  a digit followed by a letter (`2x`), a digit followed by `(` (`2(x+1)`), `)`
+  followed by `(` (`(x+1)(x+2)`), and `)` followed by a letter or digit (`(x+1)2`).
+
+  A name followed by `(` — `f(x)`, `sqrt(2)` — is **not** flagged. Maple reads it
+  as function application, so rejecting it would break valid input. An earlier
+  draft of this spec proposed a known-function whitelist instead; that was
+  discarded because it rejects every user-defined function name, and the four
+  patterns above need no whitelist to maintain.
 
 **latex**
 - Strip whitespace except where it terminates a control sequence — `\sin x` must
@@ -163,7 +173,7 @@ Each function's contract:
 - Brace single-character exponents and subscripts to a canonical form, so `x^2`
   and `x^{2}` compare equal.
 - Sets: `\{a,b,c\}`; empty set is `\{\}` or `\emptyset`.
-- `toLatex()` is pass-through.
+- `setToLatex()` and `expressionToLatex()` are pass-through.
 
 ## Threading the syntax to the graders
 
@@ -212,20 +222,20 @@ Changes:
 - `grade()` takes an `AnswerSyntax` argument and passes it to the two graders that
   care. Signature: `grade(type, input, answer, config, syntax)`. It defaults to
   `"numbas"` so existing call sites and tests stay valid.
-- `gradeExpression` calls `normalizeBySyntax` on both sides and surfaces `reason`
-  when the student's input is malformed.
-- `gradeSetOfIntegers` calls `parseSetBySyntax`; the sorted-canonical compare after
+- `gradeExpression` calls the dialect's `normalize` on both sides and surfaces
+  `reason` when the student's input is malformed.
+- `gradeSetOfIntegers` calls the dialect's `parseSet`; the sorted-canonical compare after
   parsing is unchanged. Its `normalized` output is emitted in the selected
   dialect's set notation. When `parseSet` returns `null` the grader composes the
   `reason` from the dialect's expected form — e.g. "Numbas sets look like
-  `set(1,2,3)`" — so the message lives with the grader rather than being a fourth
-  return value on every dialect module.
+  `set(1,2,3)`", using `formatSet([1,2,3])` — so the message lives with the grader
+  rather than being another return value on every dialect module.
 
 ## Rendering
 
-`mobiusToLatex` becomes `answerToLatex` and takes the syntax explicitly,
-dispatching to `toLatexBySyntax` for `expression` and `set_of_integers`. Other
-answer types are unaffected.
+`mobiusToLatex` becomes `answerToLatex` and takes the syntax explicitly, calling
+the selected dialect's `setToLatex` or `expressionToLatex`. Other answer types are
+unaffected.
 
 ## Naming
 
@@ -289,11 +299,13 @@ TDD, matching the repo's existing per-module test layout:
 - `lib/math/syntax/__tests__/numbas.test.ts` — set round-trip, empty set,
   case-insensitivity, whitespace.
 - `lib/math/syntax/__tests__/maple.test.ts` — case **sensitivity** (`Pi` ≠ `pi`),
-  brace set notation, implicit multiplication rejected with a reason, and known
-  function calls such as `sqrt(2)` and `exp(1)` accepted.
+  brace set notation, each of the four implicit-multiplication patterns rejected
+  with a reason, and function calls such as `sqrt(2)`, `exp(1)` and `f(x)`
+  accepted.
 - `lib/math/syntax/__tests__/latex.test.ts` — `\sin x` does not collapse,
   `\left`/`\right` dropped, `x^2` equals `x^{2}`, `\{...\}` sets, `\emptyset`.
-- `lib/math/syntax/__tests__/index.test.ts` — dispatch on each dialect.
+- `lib/math/syntax/__tests__/index.test.ts` — `dialect()` returns the right module
+  for each syntax, and `SYNTAX_LABELS` covers all three.
 - Extend `lib/grading/__tests__/expression.test.ts` and `set.test.ts` for each
   dialect, including a regression test that the default `"numbas"` grades exactly
   as the current implementation does.
@@ -314,8 +326,9 @@ seed row is explicitly `'numbas'`.
   fix is to add an optional override in `AnswerConfig` that falls back to the lab
   test value — the dispatcher already takes a syntax argument, so only the
   resolution step changes.
-- **Maple's implicit-multiplication rejection could be over-eager** and reject a
-  valid function call. Mitigated by the known-function whitelist and its tests.
+- **Maple's implicit-multiplication rejection could be over-eager.** Mitigated by
+  flagging only the four unambiguous patterns and never flagging a name followed
+  by `(`, with tests covering `sqrt(2)`, `exp(1)` and `f(x)`.
 - **LaTeX normalisation is the loosest of the three** — two visually identical
   LaTeX strings can differ textually. Canonical bracing covers the common case;
   anything beyond it may produce false negatives. Authors should prefer numbas or

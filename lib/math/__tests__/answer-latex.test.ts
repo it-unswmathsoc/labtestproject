@@ -1,43 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { mobiusToLatex } from "../mobius";
+import { answerToLatex } from "../answer-latex";
 
-describe("mobiusToLatex", () => {
-  it("renders a populated set as LaTeX braces", () => {
-    expect(mobiusToLatex("set(14,15,16,17,18)", "set_of_integers")).toBe(
+describe("answerToLatex with the default numbas syntax", () => {
+  it("renders a set", () => {
+    expect(answerToLatex("set(14,15,16,17,18)", "set_of_integers")).toBe(
       "\\{14,\\ 15,\\ 16,\\ 17,\\ 18\\}"
     );
   });
 
-  it("renders the empty set as emptyset", () => {
-    expect(mobiusToLatex("set()", "set_of_integers")).toBe("\\emptyset");
+  it("renders the empty set", () => {
+    expect(answerToLatex("set()", "set_of_integers")).toBe("\\emptyset");
   });
 
-  it("renders a power with braced exponent", () => {
-    expect(mobiusToLatex("2^100", "expression")).toBe("2^{100}");
+  it("braces an exponent", () => {
+    expect(answerToLatex("2^100", "expression")).toBe("2^{100}");
   });
 
-  it("renders multiplication as \\times", () => {
-    expect(mobiusToLatex("2^4*3", "expression")).toBe("2^{4}\\times 3");
+  it("renders multiplication", () => {
+    expect(answerToLatex("2^4*3", "expression")).toBe("2^{4}\\times 3");
   });
 
-  it("passes an integer through unchanged", () => {
-    expect(mobiusToLatex("19", "integer")).toBe("19");
+  it("passes an integer through", () => {
+    expect(answerToLatex("19", "integer")).toBe("19");
   });
 
-  it("maps a single_choice value to its option label", () => {
+  it("renders a single choice label as text", () => {
     expect(
-      mobiusToLatex("not_surjective", "single_choice", {
-        options: [
-          { value: "injective", label: "injective" },
-          { value: "not_surjective", label: "not surjective" },
-        ],
+      answerToLatex("not_surjective", "single_choice", "numbas", {
+        options: [{ value: "not_surjective", label: "Not surjective" }],
       })
-    ).toBe("\\text{not surjective}");
+    ).toBe("\\text{Not surjective}");
   });
 
-  it("maps multi_select values to a joined label list", () => {
+  it("renders multi-select labels as text", () => {
     expect(
-      mobiusToLatex("reflexive,symmetric", "multi_select", {
+      answerToLatex("reflexive,symmetric", "multi_select", "numbas", {
         options: [
           { value: "reflexive", label: "Reflexive" },
           { value: "symmetric", label: "Symmetric" },
@@ -46,31 +43,31 @@ describe("mobiusToLatex", () => {
     ).toBe("\\text{Reflexive, Symmetric}");
   });
 
-  it("wraps free text in \\text", () => {
-    expect(mobiusToLatex("Bijective", "text")).toBe("\\text{Bijective}");
+  it("wraps text", () => {
+    expect(answerToLatex("Bijective", "text")).toBe("\\text{Bijective}");
+  });
+});
+
+describe("answerToLatex with maple syntax", () => {
+  it("renders a brace set", () => {
+    expect(answerToLatex("{14,15}", "set_of_integers", "maple")).toBe(
+      "\\{14,\\ 15\\}"
+    );
   });
 
-  it("falls back to the raw value when no single_choice option matches", () => {
-    expect(
-      mobiusToLatex("unknown", "single_choice", {
-        options: [{ value: "injective", label: "injective" }],
-      })
-    ).toBe("\\text{unknown}");
+  it("renders multiplication", () => {
+    expect(answerToLatex("2*x^2", "expression", "maple")).toBe("2\\times x^{2}");
+  });
+});
+
+describe("answerToLatex with latex syntax", () => {
+  it("passes a set through untouched", () => {
+    expect(answerToLatex("\\{1,2,3\\}", "set_of_integers", "latex")).toBe(
+      "\\{1,2,3\\}"
+    );
   });
 
-  it("falls back to raw values for unmatched multi_select entries", () => {
-    expect(
-      mobiusToLatex("reflexive,unknown", "multi_select", {
-        options: [{ value: "reflexive", label: "Reflexive" }],
-      })
-    ).toBe("\\text{Reflexive, unknown}");
-  });
-
-  it("returns set_of_integers input unchanged when it is not set() syntax", () => {
-    expect(mobiusToLatex("42", "set_of_integers")).toBe("42");
-  });
-
-  it("leaves a non-numeric exponent untouched", () => {
-    expect(mobiusToLatex("x^y", "expression")).toBe("x^y");
+  it("passes an expression through untouched", () => {
+    expect(answerToLatex("\\frac{1}{2}", "expression", "latex")).toBe("\\frac{1}{2}");
   });
 });

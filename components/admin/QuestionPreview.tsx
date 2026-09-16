@@ -2,7 +2,7 @@
 
 import type { Question } from "@/lib/data/types";
 import { RichText } from "@/components/math/RichText";
-import { MobiusAnswer } from "@/components/math/MobiusAnswer";
+import { AnswerLatex } from "@/components/math/AnswerLatex";
 
 export function QuestionPreview({ question }: { question: Question }) {
   const parts = [...question.parts].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -45,7 +45,7 @@ export function QuestionPreview({ question }: { question: Question }) {
                   </div>
                   <div className="text-gray-500">
                     Answer:{" "}
-                    <MobiusAnswer
+                    <AnswerLatex
                       value={step.answerValue}
                       type={step.answerType}
                       config={step.answerConfig}
@@ -66,7 +66,7 @@ export function QuestionPreview({ question }: { question: Question }) {
             })}
             <div className="mt-2 text-sm text-gray-500">
               Final answer:{" "}
-              <MobiusAnswer
+              <AnswerLatex
                 value={part.answerValue}
                 type={part.answerType}
                 config={part.answerConfig}

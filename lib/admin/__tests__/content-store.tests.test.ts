@@ -11,8 +11,8 @@ function baseContent(): Content {
   return {
     courses: [{ id: "c1", code: "MATH1081", name: "Discrete", sortOrder: 1 }],
     labTests: [
-      { id: "t1", courseId: "c1", name: "Lab Test 1", isPublished: true, sortOrder: 1 },
-      { id: "t2", courseId: "c1", name: "Lab Test 2", isPublished: false, sortOrder: 2 },
+      { id: "t1", courseId: "c1", name: "Lab Test 1", isPublished: true, sortOrder: 1, answerSyntax: "numbas" },
+      { id: "t2", courseId: "c1", name: "Lab Test 2", isPublished: false, sortOrder: 2, answerSyntax: "numbas" },
     ],
     questions: [
       {

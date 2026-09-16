@@ -2,6 +2,7 @@ import type { Content } from "./types";
 import type { Course, LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import { courses, labTests, questions } from "@/lib/data/fixtures";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 
 export function seedContent(): Content {
   return structuredClone({ courses, labTests, questions });
@@ -62,6 +63,7 @@ export function createTest(
     term?: string;
     description?: string;
     isPublished: boolean;
+    answerSyntax?: AnswerSyntax;
   }
 ): { content: Content; id: string } {
   const id = newId();
@@ -69,7 +71,12 @@ export function createTest(
   const sortOrder = siblings.length
     ? Math.max(...siblings.map((t) => t.sortOrder)) + 1
     : 1;
-  const test: LabTest = { id, sortOrder, ...input };
+  const test: LabTest = {
+    id,
+    sortOrder,
+    ...input,
+    answerSyntax: input.answerSyntax ?? "numbas",
+  };
   return { content: { ...content, labTests: [...content.labTests, test] }, id };
 }
 

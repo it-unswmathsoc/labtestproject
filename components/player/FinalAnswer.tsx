@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { grade } from "@/lib/grading";
 import type { QuestionPart } from "@/lib/data/types";
-import { MobiusAnswer } from "@/components/math/MobiusAnswer";
+import { AnswerLatex } from "@/components/math/AnswerLatex";
 import { AnswerInput } from "./AnswerInput";
 import { emptyInput, type InputValue } from "./input-value";
 
@@ -68,7 +68,7 @@ export function FinalAnswer({
       {revealed ? (
         <div className="mt-2 text-sm text-gray-600">
           Answer:{" "}
-          <MobiusAnswer
+          <AnswerLatex
             value={part.answerValue}
             type={part.answerType}
             config={part.answerConfig}

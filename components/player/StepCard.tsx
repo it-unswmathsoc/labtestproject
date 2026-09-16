@@ -4,7 +4,7 @@ import { useState } from "react";
 import { grade } from "@/lib/grading";
 import type { Step } from "@/lib/data/types";
 import { RichText } from "@/components/math/RichText";
-import { MobiusAnswer } from "@/components/math/MobiusAnswer";
+import { AnswerLatex } from "@/components/math/AnswerLatex";
 import { AnswerInput } from "./AnswerInput";
 import { HintStack } from "./HintStack";
 import { emptyInput, type InputValue } from "./input-value";
@@ -79,7 +79,7 @@ export function StepCard({
       {revealed ? (
         <div className="mt-2 text-sm text-gray-600">
           Answer:{" "}
-          <MobiusAnswer
+          <AnswerLatex
             value={step.answerValue}
             type={step.answerType}
             config={step.answerConfig}

@@ -8,6 +8,10 @@ export type AnswerType =
 
 export type AnswerValue =
   | number // integer
+  // The key is "mobius" for historical reasons only — it holds an answer in
+  // whatever syntax the lab test declares, not Mobius syntax specifically.
+  // Renaming it would be a data migration of every stored answer_value, for no
+  // behavioural gain. See docs/superpowers/specs/2026-09-16-answer-syntax-dialects-design.md.
   | { mobius: string } // expression
   | number[] // set_of_integers
   | { choice: string } // single_choice

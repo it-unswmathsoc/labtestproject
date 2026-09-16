@@ -1,16 +1,19 @@
 import type { AnswerType, AnswerConfig } from "../grading/types";
+import { dialect } from "./syntax";
+import type { AnswerSyntax } from "./syntax";
 
-export function mobiusToLatex(
+export function answerToLatex(
   value: string,
   type: AnswerType,
+  syntax: AnswerSyntax = "numbas",
   config: AnswerConfig = {}
 ): string {
   const trimmed = value.trim();
   switch (type) {
     case "set_of_integers":
-      return setToLatex(trimmed);
+      return dialect(syntax).setToLatex(trimmed);
     case "expression":
-      return exponentToLatex(trimmed);
+      return dialect(syntax).expressionToLatex(trimmed);
     case "single_choice": {
       const opt = config.options?.find((o) => o.value === trimmed);
       return textLatex(opt ? opt.label : trimmed);
@@ -29,19 +32,6 @@ export function mobiusToLatex(
     default:
       return textLatex(trimmed);
   }
-}
-
-function setToLatex(value: string): string {
-  const match = /^set\(\s*(.*?)\s*\)$/i.exec(value);
-  if (!match) return value;
-  const inner = match[1].trim();
-  if (inner === "") return "\\emptyset";
-  const parts = inner.split(",").map((p) => p.trim());
-  return `\\{${parts.join(",\\ ")}\\}`;
-}
-
-function exponentToLatex(value: string): string {
-  return value.replace(/\^(-?\d+)/g, "^{$1}").replace(/\*/g, "\\times ");
 }
 
 // Assumes `value` is admin-authored plain prose with no LaTeX-special characters

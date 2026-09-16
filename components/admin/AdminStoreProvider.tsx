@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { Content } from "@/lib/admin/types";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 import {
   createCourse,
   updateCourse,
@@ -55,6 +56,7 @@ interface AdminStore {
     term?: string;
     description?: string;
     isPublished: boolean;
+    answerSyntax?: AnswerSyntax;
   }) => string;
   /** Resolves true once the write lands, so the form can confirm the save. */
   editTest: (id: string, patch: Partial<Omit<LabTest, "id">>) => Promise<boolean>;

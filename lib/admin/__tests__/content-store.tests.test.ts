@@ -73,3 +73,34 @@ describe("reorderTests", () => {
     expect(next.labTests.find((t) => t.id === "t1")?.sortOrder).toBe(2);
   });
 });
+
+describe("createTest answer syntax", () => {
+  it("stores the chosen syntax", () => {
+    const { content, id } = createTest(baseContent(), {
+      courseId: "c1",
+      name: "Lab Test 3",
+      isPublished: false,
+      answerSyntax: "maple",
+    });
+    expect(content.labTests.find((t) => t.id === id)?.answerSyntax).toBe("maple");
+  });
+
+  it("defaults to numbas when none is given", () => {
+    const { content, id } = createTest(baseContent(), {
+      courseId: "c1",
+      name: "Lab Test 4",
+      isPublished: false,
+    });
+    expect(content.labTests.find((t) => t.id === id)?.answerSyntax).toBe("numbas");
+  });
+
+  it("defaults to numbas when the key is present but undefined", () => {
+    const { content, id } = createTest(baseContent(), {
+      courseId: "c1",
+      name: "Lab Test 5",
+      isPublished: false,
+      answerSyntax: undefined,
+    });
+    expect(content.labTests.find((t) => t.id === id)?.answerSyntax).toBe("numbas");
+  });
+});

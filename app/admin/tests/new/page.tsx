@@ -24,6 +24,7 @@ export default function NewTestPage() {
             term: values.term || undefined,
             description: values.description || undefined,
             isPublished: values.isPublished,
+            answerSyntax: values.answerSyntax,
           });
           router.push(`/admin/tests/${id}`);
         }}

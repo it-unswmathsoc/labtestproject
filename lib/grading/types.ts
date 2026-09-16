@@ -32,4 +32,10 @@ export interface GradeResult {
   correct: boolean;
   /** The student input, canonicalized where the grader defines a canonical form, otherwise trimmed. For display/echo. */
   normalized: string;
+  /**
+   * A syntax-error message, set only when the input was malformed for the lab
+   * test's answer syntax — never for an answer that merely turned out wrong.
+   * The UI shows this in place of the generic "not quite" message.
+   */
+  reason?: string;
 }

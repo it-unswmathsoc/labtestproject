@@ -7,7 +7,7 @@ import type {
   AnswerConfig,
   ChoiceOption,
 } from "@/lib/grading";
-import { parseIntegerSet } from "@/lib/grading/set";
+import { dialect } from "@/lib/math/syntax";
 
 const ANSWER_TYPES: AnswerType[] = [
   "integer",
@@ -141,7 +141,7 @@ export function AnswerValueEditor({
                 : ""
             }
             onChange={(e) =>
-              emit({ answerValue: parseIntegerSet(e.target.value) ?? [] })
+              emit({ answerValue: dialect("numbas").parseSet(e.target.value) ?? [] })
             }
           />
         </div>

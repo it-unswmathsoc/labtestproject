@@ -6,10 +6,11 @@
 
 ## Overview
 
-Question authors choose, per answer, which syntax students must type their answer
-in: **Numbas**, **Maple**, or **LaTeX**. The chosen dialect drives three things —
-how student input is normalised for grading, how the stored correct answer is
-rendered to LaTeX for display, and what syntax hint the student sees.
+Each lab test declares the syntax students must type their answers in: **Numbas**,
+**Maple**, or **LaTeX**. An admin picks it once in the lab test editor. The choice
+drives three things — how student input is normalised for grading, how the stored
+correct answer is rendered to LaTeX for display, and a badge on the lab test page
+telling students which syntax to use.
 
 Today the app hardcodes one dialect (Numbas) and misnames it "Mobius" throughout.
 This design adds the other two dialects, makes the choice explicit and
@@ -46,9 +47,10 @@ Sources:
 
 ## Goals
 
-- Authors pick the answer syntax per answer, in the admin UI.
-- Grading, LaTeX rendering, and student-facing hints all follow that choice.
-- Existing MATH1081 content keeps grading identically, with no data migration.
+- An admin picks the answer syntax once per lab test.
+- Students see which syntax a lab test expects before they start.
+- Grading and LaTeX rendering both follow that choice.
+- Existing MATH1081 content keeps grading identically.
 - Dialect-neutral naming throughout the code.
 
 ## Non-goals
@@ -59,35 +61,59 @@ Sources:
   numeric-sampling comparison would add machinery for no behavioural gain.
   Comparison is canonical-string per dialect. Revisit if answers with free
   variables are ever authored.
-- **No change to the stored wire format.** The expression value stays
+- **No per-question or per-answer override.** One dialect per lab test. This
+  matches reality — MATH1081 is entirely Numbas, MATH1131 entirely Maple — and
+  keeps one place to look when an answer grades unexpectedly.
+- **No change to the stored answer wire format.** The expression value stays
   `{"mobius": "2^100"}` in `answer_value` jsonb. Renaming that key is a data
   migration with no behavioural benefit.
+- No persistent syntax hint under every input, and no expandable cheat sheet. The
+  lab test badge plus the on-error hint (below) carry the message.
 - Möbius's forgiving (non-Maple) entry mode.
 - A rich maths-input widget for students. Input stays a plain text field.
 
 ## Data model
 
-`answer_config` is already `jsonb`, so the dialect rides along in `AnswerConfig`
-with **no database migration**:
+The dialect is a property of the lab test, so it needs a migration. It follows the
+existing `answer_type` domain pattern in `20260824074047_core_schema.sql`:
+
+```sql
+create domain public.answer_syntax as text
+  check (value in ('numbas', 'maple', 'latex'));
+
+alter table public.lab_tests
+  add column answer_syntax public.answer_syntax not null default 'numbas';
+```
+
+`not null default 'numbas'` means every existing row keeps grading exactly as it
+does today, and the column is safe to add without backfilling.
+
+Corresponding TypeScript:
 
 ```ts
+// lib/math/syntax/types.ts
 export type AnswerSyntax = "numbas" | "maple" | "latex";
 
-export interface AnswerConfig {
-  tolerance?: number;
-  options?: ChoiceOption[];
-  caseInsensitive?: boolean;
-  /** Syntax students must answer in. Absent means "numbas". */
-  syntax?: AnswerSyntax;
+// lib/data/types.ts
+export interface LabTest {
+  id: string;
+  courseId: string;
+  name: string;
+  term?: string;
+  description?: string;
+  isPublished: boolean;
+  sortOrder: number;
+  answerSyntax: AnswerSyntax;   // new
 }
 ```
 
-An absent `syntax` resolves to `"numbas"`, so all existing content grades exactly
-as it does today.
+`AnswerConfig` is **not** changed. `lib/supabase/database.types.ts` is regenerated
+via `npm run gen-types`, and `toLabTest()` in `lib/supabase/mappers.ts` maps the
+new column.
 
 The dialect is meaningful only for the `expression` and `set_of_integers` answer
-types. For `integer`, `single_choice`, `multi_select` and `text` it is ignored,
-and the admin UI does not offer it.
+types. For `integer`, `single_choice`, `multi_select` and `text` the graders
+ignore it.
 
 ## Architecture
 
@@ -107,8 +133,9 @@ and testable on its own and a fourth dialect is one new file plus one switch arm
 
 Each function's contract:
 
-- `normalize(input: string): string` — canonical form for comparison. Total; never
-  throws. Returns the input trimmed if it cannot be canonicalised.
+- `normalize(input: string): { value: string; error?: string }` — canonical form
+  for comparison, plus a syntax-error message when the input is malformed for the
+  dialect. Total; never throws.
 - `toLatex(input: string, type: AnswerType): string` — display LaTeX.
 - `parseSet(input: string): number[] | null` — integers, or `null` if malformed.
 
@@ -123,16 +150,41 @@ Each function's contract:
 - **Do not lowercase.** Maple is case-sensitive; `Pi` and `pi` are different.
 - Strip all whitespace.
 - Sets: `{a,b,c}`; empty set is `{}`.
-- Implicit multiplication is malformed. A digit immediately followed by a letter
-  or `(`, or a letter immediately followed by `(` where the name is not a known
-  function, is rejected with a syntax hint rather than silently marked wrong.
+- Implicit multiplication is malformed. A digit immediately followed by a letter,
+  or a letter immediately followed by `(` where the name is not a known function,
+  is rejected with a syntax error rather than silently marked wrong. The known
+  function list covers at least `sqrt`, `abs`, `exp`, `ln`, `log`, `sin`, `cos`,
+  `tan`, `sinh`, `cosh`, `tanh`, `factorial`, `binomial`.
 
 **latex**
 - Strip whitespace except where it terminates a control sequence — `\sin x` must
   not collapse to `\sinx`.
 - Drop `\left` and `\right`.
+- Brace single-character exponents and subscripts to a canonical form, so `x^2`
+  and `x^{2}` compare equal.
 - Sets: `\{a,b,c\}`; empty set is `\{\}` or `\emptyset`.
 - `toLatex()` is pass-through.
+
+## Threading the syntax to the graders
+
+The dialect lives on the lab test but is needed at each answer input, so it is
+passed as an **explicit prop** down the player tree:
+
+```
+app/tests/[testId]/practice/page.tsx  ─┐
+app/tests/[testId]/q/[questionId]/page.tsx ─┤ read test.answerSyntax
+                                            ↓
+PracticeRunner → QuestionPlayer → PartPlayer → StepCard
+                                             → FinalAnswer → grade(..., syntax)
+```
+
+Both page entry points already load the lab test, so neither needs a new query.
+
+*Rejected alternative:* stamping `syntax` into every part's and step's
+`answerConfig` during mapping. It would avoid touching the player components, but
+it fabricates a field the database does not have, and makes the admin editor's
+config display lie. *Also rejected:* a React context — the value is static per
+page and prop threading keeps the components testable without a provider wrapper.
 
 ## Grading
 
@@ -157,17 +209,23 @@ GradeResult { correct: false,
 ```
 
 Changes:
-- `gradeExpression` takes the config, calls `normalizeBySyntax` on both sides, and
-  surfaces `reason` when the student's input is malformed for the dialect.
-- `gradeSetOfIntegers` calls `parseSetBySyntax`; the sorted-canonical compare
-  after parsing is unchanged. Its `normalized` output is emitted in the selected
-  dialect's set notation.
-- `grade()` already receives `AnswerConfig` and passes it through unchanged.
+- `grade()` takes an `AnswerSyntax` argument and passes it to the two graders that
+  care. Signature: `grade(type, input, answer, config, syntax)`. It defaults to
+  `"numbas"` so existing call sites and tests stay valid.
+- `gradeExpression` calls `normalizeBySyntax` on both sides and surfaces `reason`
+  when the student's input is malformed.
+- `gradeSetOfIntegers` calls `parseSetBySyntax`; the sorted-canonical compare after
+  parsing is unchanged. Its `normalized` output is emitted in the selected
+  dialect's set notation. When `parseSet` returns `null` the grader composes the
+  `reason` from the dialect's expected form — e.g. "Numbas sets look like
+  `set(1,2,3)`" — so the message lives with the grader rather than being a fourth
+  return value on every dialect module.
 
 ## Rendering
 
-`mobiusToLatex` becomes `answerToLatex` and dispatches to `toLatexBySyntax` for
-`expression` and `set_of_integers`. All other answer types are unaffected.
+`mobiusToLatex` becomes `answerToLatex` and takes the syntax explicitly,
+dispatching to `toLatexBySyntax` for `expression` and `set_of_integers`. Other
+answer types are unaffected.
 
 ## Naming
 
@@ -188,30 +246,41 @@ is a data migration for no gain. A comment at the type declaration records why t
 key keeps its legacy name.
 
 Call sites to update: `components/player/StepCard.tsx`,
-`components/player/FinalAnswer.tsx`,
-`components/admin/QuestionPreview.tsx`, `lib/math/index.ts`,
-`lib/data/answer-display.ts`, and their tests.
+`components/player/FinalAnswer.tsx`, `components/admin/QuestionPreview.tsx`,
+`lib/math/index.ts`, `lib/data/answer-display.ts`, and their tests.
 
 ## UI
 
-**Admin** — `AnswerValueEditor` gains a syntax `<select>`, rendered only for
-`expression` and `set_of_integers`. The correct-answer field's label and
-placeholder track the selection:
+**Admin — `components/admin/TestForm.tsx`**
 
-| Dialect | Set placeholder | Expression placeholder |
-|---|---|---|
-| numbas | `set(1,2,3)` | `2^100` |
-| maple | `{1,2,3}` | `2*x^2` |
-| latex | `\{1,2,3\}` | `2x^{2}` |
+A syntax `<select>` beside the existing name and term fields:
 
-Switching dialect does not rewrite an already-entered answer; the author retypes
-it. The existing live LaTeX preview picks up the new dialect automatically.
+```
+Name   [ Lab Test 1        ]
+Term   [ 2026 T1           ]
+Syntax [ Numbas         v  ]   Numbas / Maple / LaTeX
+```
 
-**Student** — `AnswerInput` renders a hint line beneath the field for the
-non-default dialects, e.g. "Enter your answer in Maple syntax — use `*` for
-multiplication". `StepCard` and `FinalAnswer` already pass `config` down, and both
-render `result.reason` in place of the generic "Not quite — try again." when it is
-present.
+Help text under the select: "The syntax students must use for expression and set
+answers in this test." Changing it does not rewrite existing answers — an author
+switching dialect must retype affected answer values. The admin store, its
+reducers, and `admin-mutations.ts` carry the new field.
+
+**Student — `app/tests/[testId]/page.tsx`**
+
+A badge next to the lab test title, in the existing `PageHeader`:
+
+```
+Lab Test 1            [ Numbas syntax ]
+2026 T1 · 7 questions
+```
+
+The badge renders for all three dialects, so students never have to infer it.
+
+**Student — on a syntax error**
+
+`StepCard` and `FinalAnswer` render `result.reason` in place of the generic
+"Not quite — try again." when it is present.
 
 ## Testing
 
@@ -220,25 +289,34 @@ TDD, matching the repo's existing per-module test layout:
 - `lib/math/syntax/__tests__/numbas.test.ts` — set round-trip, empty set,
   case-insensitivity, whitespace.
 - `lib/math/syntax/__tests__/maple.test.ts` — case **sensitivity** (`Pi` ≠ `pi`),
-  brace set notation, implicit multiplication rejected with a reason.
+  brace set notation, implicit multiplication rejected with a reason, and known
+  function calls such as `sqrt(2)` and `exp(1)` accepted.
 - `lib/math/syntax/__tests__/latex.test.ts` — `\sin x` does not collapse,
-  `\left`/`\right` dropped, `\{...\}` sets, `\emptyset`.
-- `lib/math/syntax/__tests__/index.test.ts` — dispatch, and that an absent
-  `syntax` resolves to numbas.
+  `\left`/`\right` dropped, `x^2` equals `x^{2}`, `\{...\}` sets, `\emptyset`.
+- `lib/math/syntax/__tests__/index.test.ts` — dispatch on each dialect.
 - Extend `lib/grading/__tests__/expression.test.ts` and `set.test.ts` for each
-  dialect, including a regression test that existing configs with no `syntax`
-  field grade exactly as before.
+  dialect, including a regression test that the default `"numbas"` grades exactly
+  as the current implementation does.
+- `lib/supabase/__tests__/mappers.test.ts` — `toLabTest` maps `answer_syntax`.
+- `components/admin/__tests__/TestForm.test.tsx` — the select renders and emits.
+- A test that the lab test page renders the badge.
 - Update existing tests for the renamed symbols.
+
+`supabase/seed.sql` and `lib/data/fixtures.ts` gain the new field; the MATH1081
+seed row is explicitly `'numbas'`.
 
 ## Risks
 
-- **Silent behaviour change for existing content.** Mitigated by the
-  absent-means-numbas default and an explicit regression test.
-- **Maple's implicit-multiplication rejection could be over-eager** and reject
-  valid input such as a function call `f(x)`. The check must whitelist known
-  function names; the test suite covers `sqrt(2)`, `exp(1)`, `sinh(x)`.
+- **Silent behaviour change for existing content.** Mitigated by the `not null
+  default 'numbas'` column and an explicit regression test.
+- **A lab test whose questions mix dialects cannot be represented.** No current
+  test does, and per-answer override is an explicit non-goal. If one appears, the
+  fix is to add an optional override in `AnswerConfig` that falls back to the lab
+  test value — the dispatcher already takes a syntax argument, so only the
+  resolution step changes.
+- **Maple's implicit-multiplication rejection could be over-eager** and reject a
+  valid function call. Mitigated by the known-function whitelist and its tests.
 - **LaTeX normalisation is the loosest of the three** — two visually identical
-  LaTeX strings can differ textually (`x^2` vs `x^{2}`). Normalisation brackets
-  single-character exponents and subscripts to a canonical form; anything beyond
-  that is accepted as-is and may produce false negatives. Authors should prefer
-  numbas or maple where the answer shape allows.
+  LaTeX strings can differ textually. Canonical bracing covers the common case;
+  anything beyond it may produce false negatives. Authors should prefer numbas or
+  maple where the answer shape allows.

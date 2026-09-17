@@ -26,7 +26,7 @@ export default async function QuestionPage({
           </>
         }
       />
-      <QuestionPlayer question={question} />
+      <QuestionPlayer question={question} answerSyntax={test.answerSyntax} />
       <div className="mt-8">
         <Link
           href={`/tests/${testId}`}

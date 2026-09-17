@@ -26,6 +26,7 @@ function renderPart(part: QuestionPart) {
       solvedPart={false}
       onStepSolved={noop}
       onPartSolved={noop}
+      answerSyntax="numbas"
     />
   );
 }

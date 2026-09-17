@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { grade } from "@/lib/grading";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 import type { QuestionPart } from "@/lib/data/types";
 import { AnswerLatex } from "@/components/math/AnswerLatex";
 import { AnswerInput } from "./AnswerInput";
@@ -13,25 +14,36 @@ export function FinalAnswer({
   part,
   solved,
   onSolved,
+  answerSyntax = "numbas",
 }: {
   part: QuestionPart;
   solved: boolean;
   onSolved: () => void;
+  answerSyntax?: AnswerSyntax;
 }) {
   const [value, setValue] = useState<InputValue>(emptyInput(part.answerType));
   const [status, setStatus] = useState<Status>("idle");
+  const [reason, setReason] = useState("");
   const [revealed, setRevealed] = useState(false);
 
   const solvedNow = solved || status === "correct";
 
   const check = () => {
     if (solvedNow) return;
-    const result = grade(part.answerType, value, part.answerValue, part.answerConfig ?? {});
+    const result = grade(
+      part.answerType,
+      value,
+      part.answerValue,
+      part.answerConfig ?? {},
+      answerSyntax
+    );
     if (result.correct) {
       setStatus("correct");
+      setReason("");
       onSolved();
     } else {
       setStatus("incorrect");
+      setReason(result.reason ?? "");
     }
   };
 
@@ -62,7 +74,9 @@ export function FinalAnswer({
         </button>
         {solvedNow ? <span className="text-sm text-green-600">Solved! 🎉</span> : null}
         {status === "incorrect" ? (
-          <span className="text-sm text-amber-600">Not quite — try again.</span>
+          <span className="text-sm text-amber-600">
+            {reason || "Not quite — try again."}
+          </span>
         ) : null}
       </div>
       {revealed ? (
@@ -71,6 +85,7 @@ export function FinalAnswer({
           <AnswerLatex
             value={part.answerValue}
             type={part.answerType}
+            syntax={answerSyntax}
             config={part.answerConfig}
           />
         </div>

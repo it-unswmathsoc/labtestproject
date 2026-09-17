@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { grade } from "@/lib/grading";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 import type { Step } from "@/lib/data/types";
 import { RichText } from "@/components/math/RichText";
 import { AnswerLatex } from "@/components/math/AnswerLatex";
@@ -15,25 +16,36 @@ export function StepCard({
   step,
   solved,
   onSolved,
+  answerSyntax = "numbas",
 }: {
   step: Step;
   solved: boolean;
   onSolved: () => void;
+  answerSyntax?: AnswerSyntax;
 }) {
   const [value, setValue] = useState<InputValue>(emptyInput(step.answerType));
   const [status, setStatus] = useState<Status>("idle");
+  const [reason, setReason] = useState("");
   const [revealed, setRevealed] = useState(false);
 
   const correct = solved || status === "correct";
 
   const check = () => {
     if (correct) return;
-    const result = grade(step.answerType, value, step.answerValue, step.answerConfig ?? {});
+    const result = grade(
+      step.answerType,
+      value,
+      step.answerValue,
+      step.answerConfig ?? {},
+      answerSyntax
+    );
     if (result.correct) {
       setStatus("correct");
+      setReason("");
       onSolved();
     } else {
       setStatus("incorrect");
+      setReason(result.reason ?? "");
     }
   };
 
@@ -72,7 +84,9 @@ export function StepCard({
         </button>
         {correct ? <span className="text-sm text-green-600">Correct!</span> : null}
         {status === "incorrect" ? (
-          <span className="text-sm text-amber-600">Not quite — try again.</span>
+          <span className="text-sm text-amber-600">
+            {reason || "Not quite — try again."}
+          </span>
         ) : null}
       </div>
       {step.hints.length > 0 ? <HintStack hints={step.hints} /> : null}
@@ -82,6 +96,7 @@ export function StepCard({
           <AnswerLatex
             value={step.answerValue}
             type={step.answerType}
+            syntax={answerSyntax}
             config={step.answerConfig}
           />
         </div>

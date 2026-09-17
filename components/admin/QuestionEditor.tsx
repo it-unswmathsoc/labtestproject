@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import type { Question } from "@/lib/data/types";
-import { useAdminStore } from "./AdminStoreProvider";
+import { useAdminStore, useAnswerSyntax } from "./AdminStoreProvider";
 import { LatexField } from "./LatexField";
 import { PartsEditor } from "./PartsEditor";
 import { QuestionPreview } from "./QuestionPreview";
 
 export function QuestionEditor({ question }: { question: Question }) {
   const { editQuestion, removeQuestion } = useAdminStore();
+  const answerSyntax = useAnswerSyntax(question.id);
   const [open, setOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -65,7 +66,7 @@ export function QuestionEditor({ question }: { question: Question }) {
             </button>
             {showPreview ? (
               <div className="mt-2">
-                <QuestionPreview question={question} />
+                <QuestionPreview question={question} answerSyntax={answerSyntax} />
               </div>
             ) : null}
           </div>

@@ -3,13 +3,22 @@
 import type { Question } from "@/lib/data/types";
 import { RichText } from "@/components/math/RichText";
 import { AnswerLatex } from "@/components/math/AnswerLatex";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 
-export function QuestionPreview({ question }: { question: Question }) {
+export function QuestionPreview({
+  question,
+  answerSyntax = "numbas",
+}: {
+  question: Question;
+  answerSyntax?: AnswerSyntax;
+}) {
   const parts = [...question.parts].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
     <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4">
-      <div className="mb-2 text-xs font-semibold uppercase text-gray-400">Preview</div>
+      <div className="mb-2 text-xs font-semibold uppercase text-gray-400">
+        Preview
+      </div>
       <div className="text-gray-800">
         <RichText>{question.promptLatex}</RichText>
       </div>
@@ -36,9 +45,14 @@ export function QuestionPreview({ question }: { question: Question }) {
               />
             ) : null}
             {steps.map((step) => {
-              const hints = [...step.hints].sort((a, b) => a.sortOrder - b.sortOrder);
+              const hints = [...step.hints].sort(
+                (a, b) => a.sortOrder - b.sortOrder,
+              );
               return (
-                <div key={step.id} className="mt-2 rounded bg-gray-50 p-2 text-sm">
+                <div
+                  key={step.id}
+                  className="mt-2 rounded bg-gray-50 p-2 text-sm"
+                >
                   <div className="text-gray-600">
                     <span className="font-medium">Step {step.number}: </span>
                     <RichText>{step.promptLatex}</RichText>
@@ -46,6 +60,7 @@ export function QuestionPreview({ question }: { question: Question }) {
                   <div className="text-gray-500">
                     Answer:{" "}
                     <AnswerLatex
+                      syntax={answerSyntax}
                       value={step.answerValue}
                       type={step.answerType}
                       config={step.answerConfig}
@@ -67,6 +82,7 @@ export function QuestionPreview({ question }: { question: Question }) {
             <div className="mt-2 text-sm text-gray-500">
               Final answer:{" "}
               <AnswerLatex
+                syntax={answerSyntax}
                 value={part.answerValue}
                 type={part.answerType}
                 config={part.answerConfig}

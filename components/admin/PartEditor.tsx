@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { QuestionPart } from "@/lib/data/types";
 import { createClient } from "@/lib/supabase/client";
-import { useAdminStore } from "./AdminStoreProvider";
+import { useAdminStore, useAnswerSyntax } from "./AdminStoreProvider";
 import { LatexField } from "./LatexField";
 import { AnswerValueEditor } from "./AnswerValueEditor";
 import { StepsEditor } from "./StepsEditor";
@@ -15,6 +15,7 @@ const BUCKET = "question-images";
 
 export function PartEditor({ part }: { part: QuestionPart }) {
   const { editPart, removePart } = useAdminStore();
+  const answerSyntax = useAnswerSyntax(part.questionId);
   const [uploadError, setUploadError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
@@ -137,6 +138,7 @@ export function PartEditor({ part }: { part: QuestionPart }) {
             answerType={part.answerType}
             answerValue={part.answerValue}
             answerConfig={part.answerConfig}
+            answerSyntax={answerSyntax}
             onChange={(state) =>
               editPart(part.id, {
                 answerType: state.answerType,

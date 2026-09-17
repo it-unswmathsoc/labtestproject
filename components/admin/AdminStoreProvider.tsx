@@ -566,3 +566,19 @@ export function useAdminStore(): AdminStore {
   }
   return store;
 }
+
+/**
+ * The answer syntax a question's lab test declares. Resolved from the store
+ * rather than threaded as a prop: the value is needed only by the leaf editors,
+ * and passing it down would put a pass-through prop on every component between
+ * QuestionsEditor and AnswerValueEditor that has no use for it.
+ *
+ * Falls back to numbas while the store is still loading, which matches the
+ * column default so a half-loaded editor never claims the wrong dialect.
+ */
+export function useAnswerSyntax(questionId: string): AnswerSyntax {
+  const { content } = useAdminStore();
+  const question = content.questions.find((q) => q.id === questionId);
+  const test = content.labTests.find((t) => t.id === question?.labTestId);
+  return test?.answerSyntax ?? "numbas";
+}

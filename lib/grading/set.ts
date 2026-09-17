@@ -1,31 +1,28 @@
 import type { GradeResult } from "./types";
+import { dialect } from "@/lib/math/syntax";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 
-/** Parse Numbas `set(a,b,c)` syntax into a number array, or null if malformed. */
-export function parseIntegerSet(input: string): number[] | null {
-  const match = /^set\(\s*(.*?)\s*\)$/i.exec(input.trim());
-  if (!match) return null;
-  const inner = match[1].trim();
-  if (inner === "") return [];
-  const parts = inner.split(",").map((p) => p.trim());
-  const nums: number[] = [];
-  for (const part of parts) {
-    if (!/^-?\d+$/.test(part)) return null;
-    nums.push(Number(part));
-  }
-  return nums;
+function canonical(members: number[]): number[] {
+  return Array.from(new Set(members)).sort((a, b) => a - b);
 }
 
-function canonical(arr: number[]): number[] {
-  return Array.from(new Set(arr)).sort((a, b) => a - b);
-}
-
-export function gradeSetOfIntegers(input: string, answer: number[]): GradeResult {
-  const parsed = parseIntegerSet(input);
+export function gradeSetOfIntegers(
+  input: string,
+  answer: number[],
+  syntax: AnswerSyntax = "numbas"
+): GradeResult {
+  const d = dialect(syntax);
+  const parsed = d.parseSet(input);
   if (parsed === null) {
-    return { correct: false, normalized: input.trim() };
+    return {
+      correct: false,
+      normalized: input.trim(),
+      reason: `Sets look like ${d.formatSet([1, 2, 3])} in this test.`,
+    };
   }
-  const a = canonical(parsed);
-  const b = canonical(answer);
-  const correct = a.length === b.length && a.every((v, i) => v === b[i]);
-  return { correct, normalized: `set(${a.join(",")})` };
+  const student = canonical(parsed);
+  const expected = canonical(answer);
+  const correct =
+    student.length === expected.length && student.every((v, i) => v === expected[i]);
+  return { correct, normalized: d.formatSet(student) };
 }

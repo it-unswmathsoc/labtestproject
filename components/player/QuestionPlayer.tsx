@@ -1,11 +1,18 @@
 "use client";
 
 import type { Question } from "@/lib/data/types";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 import { RichText } from "@/components/math/RichText";
 import { PartPlayer } from "./PartPlayer";
 import { useQuestionProgress } from "./useQuestionProgress";
 
-export function QuestionPlayer({ question }: { question: Question }) {
+export function QuestionPlayer({
+  question,
+  answerSyntax,
+}: {
+  question: Question;
+  answerSyntax: AnswerSyntax;
+}) {
   const { progress, markStep, markPart } = useQuestionProgress(question.id);
 
   return (
@@ -26,6 +33,7 @@ export function QuestionPlayer({ question }: { question: Question }) {
           solvedPart={progress.parts.includes(part.id)}
           onStepSolved={markStep}
           onPartSolved={() => markPart(part.id)}
+          answerSyntax={answerSyntax}
         />
       ))}
     </div>

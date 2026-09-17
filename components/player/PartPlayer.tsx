@@ -1,6 +1,7 @@
 "use client";
 
 import type { QuestionPart } from "@/lib/data/types";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 import { RichText } from "@/components/math/RichText";
 import { StepCard } from "./StepCard";
 import { FinalAnswer } from "./FinalAnswer";
@@ -11,12 +12,14 @@ export function PartPlayer({
   solvedPart,
   onStepSolved,
   onPartSolved,
+  answerSyntax,
 }: {
   part: QuestionPart;
   solvedSteps: string[];
   solvedPart: boolean;
   onStepSolved: (stepId: string) => void;
   onPartSolved: () => void;
+  answerSyntax: AnswerSyntax;
 }) {
   return (
     <section className="mt-6 border-l-2 border-gray-100 pl-4">
@@ -40,11 +43,17 @@ export function PartPlayer({
               step={step}
               solved={solvedSteps.includes(step.id)}
               onSolved={() => onStepSolved(step.id)}
+              answerSyntax={answerSyntax}
             />
           ))}
         </div>
       ) : null}
-      <FinalAnswer part={part} solved={solvedPart} onSolved={onPartSolved} />
+      <FinalAnswer
+        part={part}
+        solved={solvedPart}
+        onSolved={onPartSolved}
+        answerSyntax={answerSyntax}
+      />
     </section>
   );
 }

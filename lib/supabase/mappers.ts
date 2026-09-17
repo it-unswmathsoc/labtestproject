@@ -1,6 +1,8 @@
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
 import type { Course, LabTest, Question, QuestionPart, Step, Hint } from "@/lib/data/types";
 import type { Database } from "./database.types";
+import { ANSWER_SYNTAXES } from "@/lib/math/syntax";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 
 type Row<T extends keyof Database["public"]["Tables"]> =
   Database["public"]["Tables"][T]["Row"];
@@ -8,6 +10,13 @@ type Row<T extends keyof Database["public"]["Tables"]> =
 /** PostgREST embeds can come back null or absent; never sort one directly. */
 function sorted<T extends { sort_order: number }>(rows: T[] | null | undefined): T[] {
   return (rows ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/** A row predating the column, or hand-edited, must still render rather than crash. */
+function toAnswerSyntax(value: string | null | undefined): AnswerSyntax {
+  return ANSWER_SYNTAXES.includes(value as AnswerSyntax)
+    ? (value as AnswerSyntax)
+    : "numbas";
 }
 
 export function toCourse(row: Row<"courses">): Course {
@@ -29,6 +38,7 @@ export function toLabTest(row: Row<"lab_tests">): LabTest {
     description: row.description ?? undefined,
     isPublished: row.is_published,
     sortOrder: row.sort_order,
+    answerSyntax: toAnswerSyntax(row.answer_syntax),
   };
 }
 

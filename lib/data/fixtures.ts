@@ -27,6 +27,7 @@ export const labTests: LabTest[] = [
       "Practice questions covering sets, functions and number theory, with guided worked steps.",
     isPublished: true,
     sortOrder: 1,
+    answerSyntax: "numbas",
   },
   {
     id: "test-1081-lt2-draft",
@@ -36,6 +37,7 @@ export const labTests: LabTest[] = [
     description: "Draft — not yet released to students.",
     isPublished: false,
     sortOrder: 2,
+    answerSyntax: "numbas",
   },
 ];
 

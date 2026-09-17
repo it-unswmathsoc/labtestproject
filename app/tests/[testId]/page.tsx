@@ -7,6 +7,7 @@ import {
 } from "@/lib/data/queries";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { BackLink } from "@/components/ui/BackLink";
+import { SyntaxBadge } from "@/components/ui/SyntaxBadge";
 import { RichText } from "@/components/math/RichText";
 
 export const revalidate = 3600;
@@ -33,7 +34,12 @@ export default async function TestStartPage({
         {course ? course.code : "All courses"}
       </BackLink>
       <PageHeader
-        title={<RichText>{test.name}</RichText>}
+        title={
+          <span className="flex flex-wrap items-center gap-3">
+            <RichText>{test.name}</RichText>
+            <SyntaxBadge syntax={test.answerSyntax} />
+          </span>
+        }
         subtitle={
           test.term ? (
             <>

@@ -5,7 +5,7 @@ import type { Content } from "../types";
 function baseContent(): Content {
   return {
     courses: [{ id: "c1", code: "MATH1081", name: "Discrete", sortOrder: 1 }],
-    labTests: [{ id: "t1", courseId: "c1", name: "LT1", isPublished: true, sortOrder: 1 }],
+    labTests: [{ id: "t1", courseId: "c1", name: "LT1", isPublished: true, sortOrder: 1, answerSyntax: "numbas" }],
     questions: [
       {
         id: "q1",

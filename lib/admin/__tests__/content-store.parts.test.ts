@@ -22,7 +22,7 @@ function baseContent(): Content {
   return {
     courses: [{ id: "c1", code: "MATH1081", name: "Discrete", sortOrder: 1 }],
     labTests: [
-      { id: "t1", courseId: "c1", name: "LT1", isPublished: true, sortOrder: 1 },
+      { id: "t1", courseId: "c1", name: "LT1", isPublished: true, sortOrder: 1, answerSyntax: "numbas" },
     ],
     questions: [
       { id: "q1", labTestId: "t1", number: 1, promptLatex: "One", sortOrder: 1, parts: [partA] },

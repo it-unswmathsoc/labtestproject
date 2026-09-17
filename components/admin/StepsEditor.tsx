@@ -1,7 +1,7 @@
 "use client";
 
 import type { QuestionPart } from "@/lib/data/types";
-import { useAdminStore } from "./AdminStoreProvider";
+import { useAdminStore, useAnswerSyntax } from "./AdminStoreProvider";
 import { SortableList } from "./SortableList";
 import { LatexField } from "./LatexField";
 import { AnswerValueEditor } from "./AnswerValueEditor";
@@ -9,6 +9,7 @@ import { HintsEditor } from "./HintsEditor";
 
 export function StepsEditor({ part }: { part: QuestionPart }) {
   const { addStep, editStep, removeStep, moveSteps } = useAdminStore();
+  const answerSyntax = useAnswerSyntax(part.questionId);
   const steps = [...part.steps].sort((a, b) => a.sortOrder - b.sortOrder);
 
   return (
@@ -67,6 +68,7 @@ export function StepsEditor({ part }: { part: QuestionPart }) {
                       answerType={step.answerType}
                       answerValue={step.answerValue}
                       answerConfig={step.answerConfig}
+                      answerSyntax={answerSyntax}
                       onChange={(state) =>
                         editStep(step.id, {
                           answerType: state.answerType,

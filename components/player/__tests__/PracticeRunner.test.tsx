@@ -10,7 +10,7 @@ const test: LabTest = {
   courseId: "c1",
   name: "Lab Test 1",
   isPublished: true,
-  sortOrder: 1,
+  sortOrder: 1, answerSyntax: "numbas"
 };
 
 function makeQuestion(n: number): Question {

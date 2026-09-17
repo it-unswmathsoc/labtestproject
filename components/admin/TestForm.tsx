@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { Course } from "@/lib/data/types";
+import { ANSWER_SYNTAXES, SYNTAX_LABELS } from "@/lib/math/syntax";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 import { LatexField } from "./LatexField";
 
 export interface TestFormValues {
@@ -10,6 +12,7 @@ export interface TestFormValues {
   term: string;
   description: string;
   isPublished: boolean;
+  answerSyntax: AnswerSyntax;
 }
 
 export function TestForm({
@@ -34,6 +37,7 @@ export function TestForm({
     term: initial?.term ?? "",
     description: initial?.description ?? "",
     isPublished: initial?.isPublished ?? false,
+    answerSyntax: initial?.answerSyntax ?? "numbas",
   });
 
   const set = <K extends keyof TestFormValues>(key: K, value: TestFormValues[K]) => {
@@ -106,6 +110,25 @@ export function TestForm({
         onChange={(v) => set("description", v)}
         placeholder={"Covers $\\vec{u} \\cdot \\vec{v}$ and projections."}
       />
+
+      <label className="block text-sm font-medium text-gray-700">
+        Answer syntax
+        <select
+          className={inputClass}
+          value={values.answerSyntax}
+          onChange={(e) => set("answerSyntax", e.target.value as AnswerSyntax)}
+        >
+          {ANSWER_SYNTAXES.map((s) => (
+            <option key={s} value={s}>
+              {SYNTAX_LABELS[s]}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs font-normal text-gray-500">
+          The syntax students must use for expression and set answers in this
+          test. Changing it does not rewrite answers you have already entered.
+        </span>
+      </label>
 
       <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
         <input

@@ -7,7 +7,8 @@ import type {
   AnswerConfig,
   ChoiceOption,
 } from "@/lib/grading";
-import { parseIntegerSet } from "@/lib/grading/set";
+import { dialect, SYNTAX_LABELS } from "@/lib/math/syntax";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 
 const ANSWER_TYPES: AnswerType[] = [
   "integer",
@@ -48,11 +49,13 @@ export function AnswerValueEditor({
   answerType,
   answerValue,
   answerConfig,
+  answerSyntax = "numbas",
   onChange,
 }: {
   answerType: AnswerType;
   answerValue: AnswerValue;
   answerConfig?: AnswerConfig;
+  answerSyntax?: AnswerSyntax;
   onChange: (state: AnswerState) => void;
 }) {
   const typeId = useId();
@@ -114,7 +117,7 @@ export function AnswerValueEditor({
       {answerType === "expression" ? (
         <div className="block">
           <label htmlFor={answerId} className="text-sm font-medium text-gray-700">
-            Correct answer (Numbas syntax, e.g. 2^100)
+            Correct answer ({SYNTAX_LABELS[answerSyntax]} syntax)
           </label>
           <input
             id={answerId}
@@ -129,7 +132,7 @@ export function AnswerValueEditor({
       {answerType === "set_of_integers" ? (
         <div className="block">
           <label htmlFor={answerId} className="text-sm font-medium text-gray-700">
-            Correct answer (set syntax, e.g. set(1,2,3))
+            Correct answer (e.g. {dialect(answerSyntax).formatSet([1, 2, 3])})
           </label>
           <input
             id={answerId}
@@ -141,7 +144,7 @@ export function AnswerValueEditor({
                 : ""
             }
             onChange={(e) =>
-              emit({ answerValue: parseIntegerSet(e.target.value) ?? [] })
+              emit({ answerValue: dialect(answerSyntax).parseSet(e.target.value) ?? [] })
             }
           />
         </div>

@@ -1,4 +1,5 @@
 import type { AnswerType, AnswerValue, AnswerConfig } from "@/lib/grading";
+import type { AnswerSyntax } from "@/lib/math/syntax";
 
 export interface Course {
   id: string;
@@ -16,6 +17,8 @@ export interface LabTest {
   description?: string;
   isPublished: boolean;
   sortOrder: number;
+  /** The syntax students must answer in. Defaults to numbas for older rows. */
+  answerSyntax: AnswerSyntax;
 }
 
 export interface Question {

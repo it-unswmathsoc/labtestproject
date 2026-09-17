@@ -47,6 +47,7 @@ describe("toLabTest", () => {
   it("maps fields and coalesces null term/description", () => {
     const test = toLabTest({
       id: "t-1",
+      answer_syntax: "numbas",
       course_id: "c-1",
       name: "Lab Test 1",
       term: null,
@@ -63,6 +64,7 @@ describe("toLabTest", () => {
       description: undefined,
       isPublished: true,
       sortOrder: 1,
+      answerSyntax: "numbas",
     });
   });
 });
@@ -318,3 +320,33 @@ describe.each(answerCases)(
     });
   }
 );
+
+describe("toLabTest answer syntax", () => {
+  const row = {
+    id: "t1",
+    course_id: "c1",
+    name: "Lab Test 1",
+    term: null,
+    description: null,
+    is_published: true,
+    sort_order: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("maps the stored syntax", () => {
+    expect(toLabTest({ ...row, answer_syntax: "maple" } as never).answerSyntax).toBe(
+      "maple"
+    );
+  });
+
+  it("falls back to numbas for a row without one", () => {
+    expect(toLabTest(row as never).answerSyntax).toBe("numbas");
+  });
+
+  it("falls back to numbas for an unrecognised value", () => {
+    expect(toLabTest({ ...row, answer_syntax: "wat" } as never).answerSyntax).toBe(
+      "numbas"
+    );
+  });
+});

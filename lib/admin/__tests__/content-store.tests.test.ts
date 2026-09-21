@@ -11,8 +11,8 @@ function baseContent(): Content {
   return {
     courses: [{ id: "c1", code: "MATH1081", name: "Discrete", sortOrder: 1 }],
     labTests: [
-      { id: "t1", courseId: "c1", name: "Lab Test 1", isPublished: true, sortOrder: 1 },
-      { id: "t2", courseId: "c1", name: "Lab Test 2", isPublished: false, sortOrder: 2 },
+      { id: "t1", courseId: "c1", name: "Lab Test 1", isPublished: true, sortOrder: 1, answerSyntax: "numbas" },
+      { id: "t2", courseId: "c1", name: "Lab Test 2", isPublished: false, sortOrder: 2, answerSyntax: "numbas" },
     ],
     questions: [
       {
@@ -71,5 +71,36 @@ describe("reorderTests", () => {
     const next = reorderTests(baseContent(), "c1", ["t2", "t1"]);
     expect(next.labTests.find((t) => t.id === "t2")?.sortOrder).toBe(1);
     expect(next.labTests.find((t) => t.id === "t1")?.sortOrder).toBe(2);
+  });
+});
+
+describe("createTest answer syntax", () => {
+  it("stores the chosen syntax", () => {
+    const { content, id } = createTest(baseContent(), {
+      courseId: "c1",
+      name: "Lab Test 3",
+      isPublished: false,
+      answerSyntax: "maple",
+    });
+    expect(content.labTests.find((t) => t.id === id)?.answerSyntax).toBe("maple");
+  });
+
+  it("defaults to numbas when none is given", () => {
+    const { content, id } = createTest(baseContent(), {
+      courseId: "c1",
+      name: "Lab Test 4",
+      isPublished: false,
+    });
+    expect(content.labTests.find((t) => t.id === id)?.answerSyntax).toBe("numbas");
+  });
+
+  it("defaults to numbas when the key is present but undefined", () => {
+    const { content, id } = createTest(baseContent(), {
+      courseId: "c1",
+      name: "Lab Test 5",
+      isPublished: false,
+      answerSyntax: undefined,
+    });
+    expect(content.labTests.find((t) => t.id === id)?.answerSyntax).toBe("numbas");
   });
 });

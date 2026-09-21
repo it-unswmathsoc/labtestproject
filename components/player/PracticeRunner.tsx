@@ -65,7 +65,11 @@ export function PracticeRunner({
         </span>
       </div>
 
-      <QuestionPlayer key={question.id} question={question} />
+      <QuestionPlayer
+        key={question.id}
+        question={question}
+        answerSyntax={test.answerSyntax}
+      />
 
       <div className="mt-8 flex items-center justify-between border-t border-gray-100 pt-4">
         <button

@@ -122,6 +122,7 @@ export type Database = {
       }
       lab_tests: {
         Row: {
+          answer_syntax: string
           course_id: string
           created_at: string
           description: string | null
@@ -133,6 +134,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          answer_syntax?: string
           course_id: string
           created_at?: string
           description?: string | null
@@ -144,6 +146,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          answer_syntax?: string
           course_id?: string
           created_at?: string
           description?: string | null

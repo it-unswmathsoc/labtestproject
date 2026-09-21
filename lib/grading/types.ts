@@ -8,6 +8,10 @@ export type AnswerType =
 
 export type AnswerValue =
   | number // integer
+  // The key is "mobius" for historical reasons only — it holds an answer in
+  // whatever syntax the lab test declares, not Mobius syntax specifically.
+  // Renaming it would be a data migration of every stored answer_value, for no
+  // behavioural gain. See docs/superpowers/specs/2026-09-16-answer-syntax-dialects-design.md.
   | { mobius: string } // expression
   | number[] // set_of_integers
   | { choice: string } // single_choice
@@ -32,4 +36,10 @@ export interface GradeResult {
   correct: boolean;
   /** The student input, canonicalized where the grader defines a canonical form, otherwise trimmed. For display/echo. */
   normalized: string;
+  /**
+   * A syntax-error message, set only when the input was malformed for the lab
+   * test's answer syntax — never for an answer that merely turned out wrong.
+   * The UI shows this in place of the generic "not quite" message.
+   */
+  reason?: string;
 }

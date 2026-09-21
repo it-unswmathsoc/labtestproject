@@ -9,13 +9,13 @@ insert into public.courses (id, code, name, description, sort_order) values
   ('c0000000-0000-4000-8000-000000001141', 'MATH1141', 'Higher Mathematics 1A',
    'Calculus and linear algebra (higher stream).', 2);
 
-insert into public.lab_tests (id, course_id, name, term, description, is_published, sort_order) values
+insert into public.lab_tests (id, course_id, name, term, description, is_published, sort_order, answer_syntax) values
   ('7e570000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000001081',
    'Lab Test 1', '2026 T1',
    'Practice questions covering sets, functions and number theory, with guided worked steps.',
-   true, 1),
+   true, 1, 'numbas'),
   ('7e570000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000001081',
-   'Lab Test 2', '2026 T1', 'Draft — not yet released to students.', false, 2);
+   'Lab Test 2', '2026 T1', 'Draft — not yet released to students.', false, 2, 'numbas');
 
 insert into public.questions (id, lab_test_id, number, prompt_latex, note_latex, sort_order) values
   ('90e50000-0000-4000-8000-000000000001', '7e570000-0000-4000-8000-000000000001', 1,

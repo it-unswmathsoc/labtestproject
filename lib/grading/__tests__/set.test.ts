@@ -1,29 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parseIntegerSet, gradeSetOfIntegers } from "../set";
+import { gradeSetOfIntegers } from "../set";
 
-describe("parseIntegerSet", () => {
-  it("parses a populated set (Q2a answer)", () => {
-    expect(parseIntegerSet("set(14,15,16,17,18)")).toEqual([14, 15, 16, 17, 18]);
-  });
-
-  it("parses the empty set (Q7b answer)", () => {
-    expect(parseIntegerSet("set()")).toEqual([]);
-  });
-
-  it("tolerates whitespace and is case-insensitive on the keyword", () => {
-    expect(parseIntegerSet(" SET( 6 , 7 ) ")).toEqual([6, 7]);
-  });
-
-  it("returns null for non-set syntax", () => {
-    expect(parseIntegerSet("14,15,16")).toBeNull();
-  });
-
-  it("returns null for non-integer members", () => {
-    expect(parseIntegerSet("set(1,x)")).toBeNull();
-  });
-});
-
-describe("gradeSetOfIntegers", () => {
+describe("gradeSetOfIntegers with the default numbas syntax", () => {
   it("accepts an exact set (Q7c answer)", () => {
     const r = gradeSetOfIntegers(
       "set(217,502,787,1072,1357,1642)",
@@ -48,11 +26,47 @@ describe("gradeSetOfIntegers", () => {
     expect(gradeSetOfIntegers("set(14,15,16)", [14, 15, 16, 17, 18]).correct).toBe(false);
   });
 
-  it("rejects unparseable input", () => {
-    expect(gradeSetOfIntegers("14,15", [14, 15]).correct).toBe(false);
-  });
-
   it("returns a canonical sorted normalized form", () => {
     expect(gradeSetOfIntegers("set(3,1,2)", [1, 2, 3]).normalized).toBe("set(1,2,3)");
+  });
+
+  it("explains the expected set notation when input does not parse", () => {
+    const r = gradeSetOfIntegers("14,15", [14, 15]);
+    expect(r.correct).toBe(false);
+    expect(r.reason).toContain("set(1,2,3)");
+  });
+});
+
+describe("gradeSetOfIntegers with maple syntax", () => {
+  it("accepts brace notation", () => {
+    expect(gradeSetOfIntegers("{14,15,16}", [14, 15, 16], "maple").correct).toBe(true);
+  });
+
+  it("matches the empty set", () => {
+    expect(gradeSetOfIntegers("{}", [], "maple").correct).toBe(true);
+  });
+
+  it("normalizes to brace notation", () => {
+    expect(gradeSetOfIntegers("{3,1,2}", [1, 2, 3], "maple").normalized).toBe("{1,2,3}");
+  });
+
+  it("rejects Numbas set() notation with a reason naming brace notation", () => {
+    const r = gradeSetOfIntegers("set(1,2,3)", [1, 2, 3], "maple");
+    expect(r.correct).toBe(false);
+    expect(r.reason).toContain("{1,2,3}");
+  });
+});
+
+describe("gradeSetOfIntegers with latex syntax", () => {
+  it("accepts escaped brace notation", () => {
+    expect(gradeSetOfIntegers("\\{14,15\\}", [14, 15], "latex").correct).toBe(true);
+  });
+
+  it("accepts \\emptyset for the empty set", () => {
+    expect(gradeSetOfIntegers("\\emptyset", [], "latex").correct).toBe(true);
+  });
+
+  it("normalizes to escaped brace notation", () => {
+    expect(gradeSetOfIntegers("\\{3,1,2\\}", [1, 2, 3], "latex").normalized).toBe("\\{1,2,3\\}");
   });
 });

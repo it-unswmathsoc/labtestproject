@@ -41,6 +41,7 @@ export default function EditTestPage({
           term: test.term ?? "",
           description: test.description ?? "",
           isPublished: test.isPublished,
+          answerSyntax: test.answerSyntax,
         }}
         onSubmit={(values) =>
           editTest(id, {
@@ -49,6 +50,7 @@ export default function EditTestPage({
             term: values.term || undefined,
             description: values.description || undefined,
             isPublished: values.isPublished,
+            answerSyntax: values.answerSyntax,
           })
         }
       />

@@ -28,3 +28,23 @@ describe("grade dispatcher", () => {
     expect(grade("text", "Bijective", { text: "Bijective" }).correct).toBe(true);
   });
 });
+
+describe("grade with an answer syntax", () => {
+  it("defaults to numbas when no syntax is given", () => {
+    expect(grade("set_of_integers", "set(1,2)", [1, 2]).correct).toBe(true);
+  });
+
+  it("passes the syntax to the set grader", () => {
+    expect(grade("set_of_integers", "{1,2}", [1, 2], {}, "maple").correct).toBe(true);
+  });
+
+  it("passes the syntax to the expression grader", () => {
+    expect(
+      grade("expression", "2*x", { mobius: "2*x" }, {}, "maple").correct
+    ).toBe(true);
+  });
+
+  it("ignores the syntax for answer types that do not use it", () => {
+    expect(grade("integer", "19", 19, {}, "maple").correct).toBe(true);
+  });
+});

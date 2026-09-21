@@ -79,6 +79,7 @@ export const insertLabTest = (test: LabTest) =>
         description: test.description ?? null,
         is_published: test.isPublished,
         sort_order: test.sortOrder,
+        answer_syntax: test.answerSyntax,
       })
   );
 
@@ -93,6 +94,7 @@ export const updateLabTest = (id: string, patch: Partial<LabTest>) =>
         ...("description" in patch && { description: patch.description ?? null }),
         ...(patch.isPublished !== undefined && { is_published: patch.isPublished }),
         ...(patch.sortOrder !== undefined && { sort_order: patch.sortOrder }),
+        ...(patch.answerSyntax !== undefined && { answer_syntax: patch.answerSyntax }),
       })
       .eq("id", id)
   );
